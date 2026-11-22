@@ -1,0 +1,79 @@
+name: Release
+
+# v と Cargo.toml の版が一致するタグを push したときだけ、GitHub Release を作る (D-103)。
+# 試験は回さない。main の CI が通ったコミットにタグを切る。
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 組み立ての前に見る。違うタグでは Release を作らない。
+      - name: Tag matches Cargo.toml
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $cargo = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          if ($tag -ne "v$cargo") {
+            throw "タグ $tag は Cargo.toml の版 $cargo と違います (v$cargo にしてください)。Release は作っていません。"
+          }
+
+      - name: Rust targets (x86 が主、x64 も)
+        run: rustup target add i686-pc-windows-msvc x86_64-pc-windows-msvc wasm32-unknown-unknown
+
+      # 専用の画面 (ui/) を wasm にするつなぎの道具。版は ui/Cargo.lock の wasm-bindgen と同じ (ci.yml と同じ)。
+      - name: wasm-bindgen
+        run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build both
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Zip and publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $cargo = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          $bits = @{ x86 = 32; x64 = 64 }
+          $hashes = [ordered]@{}
+          foreach ($a in @('x86', 'x64')) {
+            $exe = "dist\$a\netdbg.exe"
+            $line = (& $exe --version | Select-Object -First 1).Trim()
+            $pattern = '^netdbg ' + [regex]::Escape($cargo) + " \($($bits[$a]) bit\)$"
+            if ($line -notmatch $pattern) { throw "$exe の版が違います: $line" }
+            Copy-Item LICENSE, THIRD-PARTY-NOTICES.txt "dist\$a"
+            $zip = "netdbg-$cargo-win-$a.zip"
+            if (Test-Path $zip) { Remove-Item $zip }
+            Compress-Archive -Path "dist\$a\*" -DestinationPath $zip
+            $hashes[$zip] = (Get-FileHash $zip -Algorithm SHA256).Hash
+          }
+          $lines = @(
+            "netdbg $cargo",
+            '',
+            'Windows builds. Use the zip that matches the program (x86 is what the tests judge).',
+            '',
+            "- ``netdbg-$cargo-win-x86.zip``",
+            "  SHA-256: $($hashes["netdbg-$cargo-win-x86.zip"])",
+            "- ``netdbg-$cargo-win-x64.zip``",
+            "  SHA-256: $($hashes["netdbg-$cargo-win-x64.zip"])",
+            '',
+            'Unzip and run netdbg.exe. Keep dbgshim.dll beside it. Edit and Continue needs a .NET SDK 9.0.200 or later on the machine; it is not in the zip.'
+          )
+          $notes = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          Set-Content -Path $notes -Value ($lines -join "`n") -Encoding utf8NoBOM
+          gh release create $tag --title "netdbg $cargo" --notes-file $notes "netdbg-$cargo-win-x86.zip" "netdbg-$cargo-win-x64.zip"
+          if ($LASTEXITCODE -ne 0) { throw "gh release create が失敗しました (exit $LASTEXITCODE)。" }

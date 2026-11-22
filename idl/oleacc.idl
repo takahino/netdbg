@@ -1,0 +1,54 @@
+// Active Accessibility (MSAA) の IAccessible。対象の画面のコントロールの状態（チェックされているかなど）を読むためだけに使う。
+// Windows SDK の oleacc.idl から、ここで使う宣言だけを、文書（learn.microsoft.com の IAccessible）の並びのとおりに書いたもの。
+// メソッドの並びは vtable の並びなので、変えない（src/cordebug_layout_test.rs が検算する）。
+
+typedef WCHAR* BSTR;
+typedef WCHAR* LPOLESTR;
+typedef DWORD LCID;
+typedef LONG DISPID;
+
+// VARIANT。共用体（値）の部分は、いちばん大きいメンバー（BRECORD: ポインター 2 つ）の大きさで、x86 では 16 バイト、x64 では
+// 24 バイトになる。ポインターの大きさの数 2 つで同じ大きさにする（[out] VARIANT* に相手が全体を書いても、はみ出さない）。
+// VT_I4 などの整数の値は、data[0] の下位にある。
+typedef struct tagVARIANT {
+    USHORT vt;
+    USHORT wReserved1;
+    USHORT wReserved2;
+    USHORT wReserved3;
+    ULONG_PTR data[2];
+} VARIANT;
+
+[object, uuid(00020400-0000-0000-C000-000000000046)]
+interface IDispatch : IUnknown
+{
+    HRESULT GetTypeInfoCount([out] UINT* pctinfo);
+    HRESULT GetTypeInfo([in] UINT iTInfo, [in] LCID lcid, [out] ITypeInfo** ppTInfo);
+    HRESULT GetIDsOfNames([in] REFIID riid, [in] LPOLESTR* rgszNames, [in] UINT cNames, [in] LCID lcid, [out] DISPID* rgDispId);
+    HRESULT Invoke([in] DISPID dispIdMember, [in] REFIID riid, [in] LCID lcid, [in] WORD wFlags, [in, out] DISPPARAMS* pDispParams, [out] VARIANT* pVarResult, [out] EXCEPINFO* pExcepInfo, [out] UINT* puArgErr);
+};
+
+[object, uuid(618736E0-3C3D-11CF-810C-00AA00389B71)]
+interface IAccessible : IDispatch
+{
+    HRESULT get_accParent([out] IDispatch** ppdispParent);
+    HRESULT get_accChildCount([out] LONG* pcountChildren);
+    HRESULT get_accChild([in] VARIANT varChild, [out] IDispatch** ppdispChild);
+    HRESULT get_accName([in] VARIANT varChild, [out] BSTR* pszName);
+    HRESULT get_accValue([in] VARIANT varChild, [out] BSTR* pszValue);
+    HRESULT get_accDescription([in] VARIANT varChild, [out] BSTR* pszDescription);
+    HRESULT get_accRole([in] VARIANT varChild, [out] VARIANT* pvarRole);
+    HRESULT get_accState([in] VARIANT varChild, [out] VARIANT* pvarState);
+    HRESULT get_accHelp([in] VARIANT varChild, [out] BSTR* pszHelp);
+    HRESULT get_accHelpTopic([out] BSTR* pszHelpFile, [in] VARIANT varChild, [out] LONG* pidTopic);
+    HRESULT get_accKeyboardShortcut([in] VARIANT varChild, [out] BSTR* pszKeyboardShortcut);
+    HRESULT get_accFocus([out] VARIANT* pvarChild);
+    HRESULT get_accSelection([out] VARIANT* pvarChildren);
+    HRESULT get_accDefaultAction([in] VARIANT varChild, [out] BSTR* pszDefaultAction);
+    HRESULT accSelect([in] LONG flagsSelect, [in] VARIANT varChild);
+    HRESULT accLocation([out] LONG* pxLeft, [out] LONG* pyTop, [out] LONG* pcxWidth, [out] LONG* pcyHeight, [in] VARIANT varChild);
+    HRESULT accNavigate([in] LONG navDir, [in] VARIANT varStart, [out] VARIANT* pvarEndUpAt);
+    HRESULT accHitTest([in] LONG xLeft, [in] LONG yTop, [out] VARIANT* pvarChild);
+    HRESULT accDoDefaultAction([in] VARIANT varChild);
+    HRESULT put_accName([in] VARIANT varChild, [in] BSTR szName);
+    HRESULT put_accValue([in] VARIANT varChild, [in] BSTR szValue);
+};

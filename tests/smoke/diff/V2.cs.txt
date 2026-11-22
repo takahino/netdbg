@@ -1,0 +1,54 @@
+// 差し替わった exe の差分 (Test-Diff) の対象の、後の版。V1.cs.txt から、Adjust の中身を変え、Label を足した。
+// Label をいちばん前に足したので、ほかのメソッドのトークンと、ラムダの名前の番号 (<Sum>b__3_0 → b__4_0) がずれる。
+// それでも、差分には Adjust と Label だけが出る。
+using System;
+using System.Linq;
+
+static class Program
+{
+    static string Label()
+    {
+        return "v2";
+    }
+
+    static int Compute(int x)
+    {
+        int y = x * 2;
+        return y + 1;
+    }
+
+    static int Adjust(int x)
+    {
+        return x - 2;
+    }
+
+    static int Sum(int[] values)
+    {
+        return values.Where(v => v > 0).Sum();
+    }
+
+    // 型引数だけが違う多重定義 (変えていないので、差分に出てはいけない)。
+    static T Make<T>(string text)
+    {
+        return default(T);
+    }
+
+    static string Make(string text)
+    {
+        return text + "!";
+    }
+
+    static void Main(string[] args)
+    {
+        int total = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            total += Compute(10 + i);
+        }
+        if (args.Length > 0)
+        {
+            total = Adjust(total);
+        }
+        Console.WriteLine("total " + total + " " + Sum(new[] { 1, -2, 3 }));
+    }
+}

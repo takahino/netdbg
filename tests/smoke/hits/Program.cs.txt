@@ -1,0 +1,73 @@
+// スモーク試験 Test-BreakpointRules の対象: ログポイント、ヒットカウント、条件の欄の印 (#once、#after、#changed、#caller)、
+// 区間の計測 (#timer-start / #timer-end)、値の記録 (#track:)、Step Into Target、値の変化で止める、を、エンジンが行うことを確かめる。
+using System;
+using System.Threading;
+
+static class Program
+{
+    static int total;
+    static int counter;
+
+    static void Log(int value)
+    {
+        total += value; // @log
+    }
+
+    static void A() { Log(1); }
+
+    static void B() { Log(2); }
+
+    static int Twice(int v)
+    {
+        return v * 2;
+    }
+
+    static void Bump(int by)
+    {
+        counter += by; // @write
+    }
+
+    static int Plus(int a, int b)
+    {
+        return a + b; // @plus
+    }
+
+    static void Main()
+    {
+        for (int i = 1; i <= 3; i++)
+        {
+            total += i; // @logpoint
+        }
+        Console.WriteLine(total); // @track
+        A();
+        B();
+        int x = 0;
+        for (int k = 0; k < 5; k++)
+        {
+            if (k == 2)
+            {
+                x = 5;
+            }
+            Console.WriteLine(k + x); // @changed
+        }
+        for (int n = 0; n < 5; n++)
+        {
+            total += n; // @hit
+        }
+        for (int m = 0; m < 3; m++)
+        {
+            total -= m; // @once
+        }
+        Console.WriteLine("not yet"); // @notyet
+        Console.WriteLine("dependent"); // @dependent
+        Console.WriteLine("t0"); // @timerstart
+        Thread.Sleep(50);
+        Console.WriteLine("t1"); // @timerend
+        int sum = Plus(Twice(1), Twice(2)); // @nested
+        Console.WriteLine(sum);
+        Bump(0);
+        Bump(3);
+        Console.WriteLine(counter);
+        Console.WriteLine("done " + total); // @done
+    }
+}

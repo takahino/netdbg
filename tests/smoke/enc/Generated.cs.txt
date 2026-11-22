@@ -1,0 +1,24 @@
+// Edit and Continue のスモーク試験 (Test-Enc) の、ソース生成器を使う対象。Point にフィールドを足して当てると、生成器が
+// 作る Point.Fields() も変わる (補助が生成器を走らせ直す)。
+using System;
+
+class DescribeAttribute : Attribute
+{
+}
+
+[Describe]
+partial class Point
+{
+    public int X;
+}
+
+static class Program
+{
+    static void Main()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            Console.WriteLine("fields " + i + " " + Point.Fields()); // @fields
+        }
+    }
+}

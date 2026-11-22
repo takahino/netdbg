@@ -1,0 +1,58 @@
+// スモーク試験 Test-DialogLog の対象: メッセージ ボックスとフォームのダイアログを出す (タイマーで閉じる)。
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Windows.Forms;
+
+class EditForm : Form
+{
+    public EditForm()
+    {
+        Text = "Edit order";
+        Shown += (s, e) => Close();
+    }
+}
+
+static class Program
+{
+    delegate bool EnumWindowsProc(IntPtr window, IntPtr parameter);
+    [DllImport("user32.dll")] static extern bool EnumThreadWindows(uint thread, EnumWindowsProc callback, IntPtr parameter);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int length);
+    [DllImport("user32.dll")] static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+
+    // 人の代わりに、出ているメッセージ ボックス (#32770) を閉じる。画面がロックされていても動くように、窓にメッセージを送る。
+    static void CloseMessageBoxes()
+    {
+        EnumThreadWindows(GetCurrentThreadId(), (window, _) =>
+        {
+            var name = new StringBuilder(32);
+            GetClassName(window, name, name.Capacity);
+            if (name.ToString() == "#32770")
+            {
+                PostMessage(window, 0x0010, IntPtr.Zero, IntPtr.Zero);
+            }
+            return true;
+        }, IntPtr.Zero);
+    }
+
+    static void Confirm()
+    {
+        MessageBox.Show("Delete order 7?", "Confirm", MessageBoxButtons.OKCancel); // @confirm
+    }
+
+    [STAThread]
+    static void Main()
+    {
+        var closer = new Timer { Interval = 300 };
+        closer.Tick += (s, e) => CloseMessageBoxes();
+        closer.Start();
+        MessageBox.Show("Saved 3 orders", "Orders");
+        Confirm();
+        using (var dialog = new EditForm())
+        {
+            dialog.ShowDialog();
+        }
+        Console.WriteLine("done"); // @done
+    }
+}

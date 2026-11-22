@@ -1,0 +1,22 @@
+// EnC の試しの対象。Program.v1.cs.txt に差し替えて、次の 3 つを見る:
+// 止まっている Main の乗り換え (ローカル変数が保たれるか)、メソッドの追加、古い版に置いたブレークポイント。
+using System;
+
+static class Program
+{
+    static int Compute(int x)
+    {
+        return x + 1; // enc-compute
+    }
+
+    static void Main()
+    {
+        int total = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            int r = Compute(10);
+            total += r; // enc-stop
+            Console.WriteLine("result " + r + " total " + total);
+        }
+    }
+}

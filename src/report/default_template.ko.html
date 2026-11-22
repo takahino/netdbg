@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>테스트 보고서{{#programName}} - {{programName}}{{/programName}}</title>
+<!--
+  netdbg 테스트 보고서의 기본 템플릿입니다(D-083). 사내 양식에 맞게 고쳐서 사용하십시오.
+  ｛｛이름｝｝은 값, ｛｛#목록｝｝…｛｛/목록｝｝은 반복, ｛｛^이름｝｝…｛｛/이름｝｝은 값이 없을 때만 출력합니다(반각 중괄호로 쓰십시오). 사용할 수 있는 이름은 names.txt에 있습니다.
+  보고서를 하나의 독립된 파일로 유지하기 위해 스크립트, 외부 CSS, 그림과 URL, on… 특성은 쓸 수 없습니다.
+-->
+<style>
+body { font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; margin: 16px 20px; color: #222; font-size: 13px; line-height: 1.4; }
+h1 { font-size: 19px; margin: 0 0 8px; }
+h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+h2 .when { font-weight: normal; color: #666; font-size: 12px; margin-left: auto; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #d4d4d4; padding: 2px 6px; text-align: left; vertical-align: top; }
+th { background: #f3f3f3; white-space: nowrap; font-weight: 600; }
+.cover td, .cover th, .index td, .index th { font-size: 12px; }
+.index { margin: 8px 0 14px; } .index td.num { text-align: right; }
+.result { font-weight: bold; padding: 0 7px; border-radius: 3px; font-size: 12px; }
+.ok { background: #d8f0dc; color: #1a6b2b; } .ng { background: #fadbd8; color: #a3261b; } .open { background: #eee; color: #666; }
+section.item { display: none; border: 1px solid #ccc; border-left: 5px solid #bbb; border-radius: 4px; padding: 8px 10px; margin: 10px 0; }
+section.item.passed { border-left-color: #4caf50; } section.item.failed { border-left-color: #e53935; }
+section.item:target, #all:target ~ section.item { display: block; }
+body:has(section.item:target) .home { display: none; }
+.pager { display: flex; gap: 14px; font-size: 12px; margin: 0 0 6px; } a { color: #0563c1; } .show-all { font-size: 12px; }
+.facts { color: #555; font-size: 12px; margin: 3px 0 6px; } .facts b { color: #222; font-weight: 600; }
+.note { margin: 4px 0 6px; padding: 3px 6px; background: #fffbe6; border: 1px solid #f0e2a0; font-size: 12px; white-space: pre-wrap; }
+.ops { width: 100%; margin: 4px 0; } .ops td { font-size: 12px; } .ops td.n, .ops td.t { white-space: nowrap; color: #666; }
+.ops td.t { font-family: Consolas, monospace; } .ops td.who { white-space: nowrap; }
+.ops td.n, .ops td.t, .ops td.who { width: 1%; }
+.ops td.shot { width: 1%; padding: 2px; }
+.zoom input { display: none; }
+.zoom img { display: block; max-width: 160px; max-height: 110px; border: 1px solid #bbb; cursor: zoom-in; }
+.zoom input:checked + img { position: fixed; inset: 0; margin: auto; max-width: 96vw; max-height: 96vh; z-index: 10; background: #fff; cursor: zoom-out; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55); }
+.ops tr.note td { background: #fafafa; color: #444; }
+.who-ai { color: #1565c0; } .who-hand { color: #6a1b9a; }
+.details { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 12px; margin: 6px 0 2px; }
+.details h3 { font-size: 12px; margin: 0; color: #444; } .details ul { margin: 0; padding-left: 18px; font-size: 12px; }
+pre { margin: 0; background: #f7f7f7; border: 1px solid #ddd; padding: 3px 5px; font-size: 11px; white-space: pre-wrap; }
+.pictures { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; } figure { margin: 0; } figcaption { font-size: 11px; color: #666; }
+.muted { color: #888; }
+@media print { .home, section.item { display: block !important; } .pager, .show-all { display: none; } section.item { break-inside: avoid-page; } }
+</style>
+</head>
+<body>
+<div class="home" id="top">
+<h1>테스트 보고서</h1>
+<table class="cover">
+{{#program}}<tr><th>프로그램</th><td>{{program}}　버전 {{version}}{{^version}}(버전 정보 없음){{/version}}　수정 {{modified}}</td></tr>
+{{/program}}<tr><th>기간</th><td>{{started}} – {{ended}}</td></tr>
+<tr><th>결과</th><td>OK {{okCount}} / NG {{ngCount}} / 전체 {{itemCount}}　(작성 {{generated}})</td></tr>
+</table>
+<table class="index">
+<tr><th>번호</th><th>항목</th><th>결과</th><th>소요 시간</th><th>작업</th><th>스크린샷</th><th>변경</th><th>SQL</th><th>메시지</th><th>예외</th></tr>
+{{#items}}<tr><td><a href="#{{anchor}}">{{id}}</a></td><td>{{title}}</td><td><span class="result {{resultClass}}">{{result}}</span></td><td class="num">{{duration}}</td><td class="num">{{operationCount}}</td><td class="num">{{pictureCount}}</td><td class="num">{{changeCount}}</td><td class="num">{{sqlCount}}</td><td class="num">{{messageCount}}</td><td class="num">{{exceptionCount}}</td></tr>
+{{/items}}</table>
+<p class="show-all"><a href="#all">모든 항목 함께 보기</a>(번호를 클릭하면 그 항목만, 스크린샷을 클릭하면 크게 볼 수 있습니다)</p>
+</div>
+<div id="all"></div>
+{{#items}}<section class="item {{stateClass}}" id="{{anchor}}">
+<nav class="pager"><a href="#top">← 목록으로</a>{{#previous}}<a href="#{{previous}}">‹ 이전 항목</a>{{/previous}}{{#next}}<a href="#{{next}}">다음 항목 ›</a>{{/next}}</nav>
+<h2><span>{{id}}</span><span>{{title}}</span><span class="result {{resultClass}}">{{result}}</span><span class="when">{{started}} – {{endedTime}} ({{duration}})</span></h2>
+<p class="facts">{{#exe}}<span title="{{exe}}"><b>{{exeName}}</b> 버전 {{exeVersion}}{{^exeVersion}}없음{{/exeVersion}} / 수정 {{exeModified}}</span>　·　{{/exe}}작업 <b>{{operationCount}}</b>　·　스크린샷 <b>{{pictureCount}}</b>　·　변경 <b>{{changeCount}}</b>　·　SQL <b>{{sqlCount}}</b>　·　메시지 <b>{{messageCount}}</b>　·　예외 <b>{{exceptionCount}}</b></p>
+{{#note}}<p class="note">메모: {{note}}</p>
+{{/note}}{{#hasOperations}}<table class="ops">
+<tr><th>#</th><th>시간</th><th>주체</th><th>작업</th>{{#hasOperationPictures}}<th>작업한 위치</th><th>작업 후</th>{{/hasOperationPictures}}</tr>
+{{#operations}}<tr class="{{rowClass}}"><td class="n">{{index}}</td><td class="t">{{time}}</td><td class="who {{actorClass}}">{{actor}}</td><td>{{text}}</td>{{#hasOperationPictures}}<td class="shot">{{spotPicture}}</td><td class="shot">{{afterPicture}}</td>{{/hasOperationPictures}}</tr>
+{{/operations}}</table>
+{{/hasOperations}}{{^hasOperations}}<p class="muted">(기록된 작업이 없습니다)</p>
+{{/hasOperations}}{{#hasDetails}}<div class="details">{{#hasChanges}}<div><h3>변경된 컨트롤</h3>{{^changes}}<p class="muted">{{changeReason}}</p>{{/changes}}<ul>{{#changes}}<li>{{text}}</li>{{/changes}}</ul></div>{{/hasChanges}}{{#sqlText}}<div><h3>SQL</h3><pre>{{sqlText}}</pre></div>{{/sqlText}}{{#messageText}}<div><h3>메시지</h3><ul>{{#messages}}<li>{{text}}</li>{{/messages}}</ul></div>{{/messageText}}{{#exceptionText}}<div><h3>예외</h3><ul>{{#exceptions}}<li>{{text}}</li>{{/exceptions}}</ul></div>{{/exceptionText}}{{#missedPictures}}<div><h3>찍지 못한 스크린샷</h3><p class="muted">{{text}}</p></div>{{/missedPictures}}</div>
+{{/hasDetails}}<div class="pictures">{{#pictures}}<figure>{{picture}}<figcaption>{{caption}}</figcaption></figure>{{/pictures}}</div>
+</section>
+{{/items}}</body>
+</html>

@@ -1,0 +1,1042 @@
+// UI Automation のクライアントの API。デバッグ中の WPF の画面のコントロールを読み、操作する（D-055）。
+// Windows SDK 10.0.26100.0 の UIAutomationClient.idl（と UIAutomationCore.idl の列挙）から、使う宣言だけを書き写したもの。
+// インターフェイスの本体は、SDK の文面のまま（メソッドの並びは vtable の並びなので、変えない。src/cordebug_layout_test.rs が
+// 検算する）。SDK では library の中にあるものを、idlgen が読める最上位に置いている。
+//
+//     cargo run -p idlgen -- idl/uiautomation.idl src/uiautomation.rs
+
+typedef WCHAR* BSTR;
+typedef int PROPERTYID;
+typedef int PATTERNID;
+typedef int EVENTID;
+typedef int CONTROLTYPEID;
+typedef void * UIA_HWND;
+
+typedef struct tagRECT { LONG left; LONG top; LONG right; LONG bottom; } RECT;
+typedef struct tagPOINT { LONG x; LONG y; } POINT;
+
+// VARIANT（idl/oleacc.idl と同じ形）。共用体（値）の部分は、x86 で 8 バイト、x64 で 16 バイト。
+typedef struct tagVARIANT {
+    USHORT vt;
+    USHORT wReserved1;
+    USHORT wReserved2;
+    USHORT wReserved3;
+    ULONG_PTR data[2];
+} VARIANT;
+
+// ---- UIAutomationCore.idl の列挙
+enum ToggleState
+{
+ToggleState_Off = 0,
+ToggleState_On = 1,
+ToggleState_Indeterminate = 2
+};
+
+enum ExpandCollapseState
+{
+ExpandCollapseState_Collapsed = 0,
+ExpandCollapseState_Expanded = 1,
+ExpandCollapseState_PartiallyExpanded = 2,
+ExpandCollapseState_LeafNode = 3
+};
+
+// ---- UIAutomationClient.idl の列挙
+enum TreeScope
+{
+TreeScope_None =          0x0,
+TreeScope_Element =       0x1,
+TreeScope_Children =      0x2,
+TreeScope_Descendants =   0x4,
+TreeScope_Parent =        0x8,
+TreeScope_Ancestors =     0x10,
+TreeScope_Subtree = TreeScope_Element | TreeScope_Children | TreeScope_Descendants
+};
+
+enum PropertyConditionFlags
+{
+PropertyConditionFlags_None = 0x00,
+PropertyConditionFlags_IgnoreCase = 0x01,
+PropertyConditionFlags_MatchSubstring = 0x02,
+};
+
+enum AutomationElementMode
+{
+AutomationElementMode_None,
+AutomationElementMode_Full
+};
+
+// ---- 番号（UIAutomationClient.idl の library の中の module）
+module UIA_PatternIds
+{
+    const long UIA_InvokePatternId             = 10000;
+    const long UIA_SelectionPatternId          = 10001;
+    const long UIA_ValuePatternId              = 10002;
+    const long UIA_RangeValuePatternId         = 10003;
+    const long UIA_ScrollPatternId             = 10004;
+    const long UIA_ExpandCollapsePatternId     = 10005;
+    const long UIA_GridPatternId               = 10006;
+    const long UIA_GridItemPatternId           = 10007;
+    const long UIA_MultipleViewPatternId       = 10008;
+    const long UIA_WindowPatternId             = 10009;
+    const long UIA_SelectionItemPatternId      = 10010;
+    const long UIA_DockPatternId               = 10011;
+    const long UIA_TablePatternId              = 10012;
+    const long UIA_TableItemPatternId          = 10013;
+    const long UIA_TextPatternId               = 10014;
+    const long UIA_TogglePatternId             = 10015;
+    const long UIA_TransformPatternId          = 10016;
+    const long UIA_ScrollItemPatternId         = 10017;
+    const long UIA_LegacyIAccessiblePatternId  = 10018;
+    const long UIA_ItemContainerPatternId      = 10019;
+    const long UIA_VirtualizedItemPatternId    = 10020;
+    const long UIA_SynchronizedInputPatternId  = 10021;
+    const long UIA_ObjectModelPatternId        = 10022;
+    const long UIA_AnnotationPatternId         = 10023;
+    const long UIA_TextPattern2Id              = 10024;
+    const long UIA_StylesPatternId             = 10025;
+    const long UIA_SpreadsheetPatternId        = 10026;
+    const long UIA_SpreadsheetItemPatternId    = 10027;
+    const long UIA_TransformPattern2Id         = 10028;
+    const long UIA_TextChildPatternId          = 10029;
+    const long UIA_DragPatternId               = 10030;
+    const long UIA_DropTargetPatternId         = 10031;
+    const long UIA_TextEditPatternId           = 10032;
+    const long UIA_CustomNavigationPatternId   = 10033;
+    const long UIA_SelectionPattern2Id         = 10034;
+};
+
+module UIA_PropertyIds
+{
+    const long UIA_RuntimeIdPropertyId                            = 30000;
+    const long UIA_BoundingRectanglePropertyId                    = 30001;
+    const long UIA_ProcessIdPropertyId                            = 30002;
+    const long UIA_ControlTypePropertyId                          = 30003;
+    const long UIA_LocalizedControlTypePropertyId                 = 30004;
+    const long UIA_NamePropertyId                                 = 30005;
+    const long UIA_AcceleratorKeyPropertyId                       = 30006;
+    const long UIA_AccessKeyPropertyId                            = 30007;
+    const long UIA_HasKeyboardFocusPropertyId                     = 30008;
+    const long UIA_IsKeyboardFocusablePropertyId                  = 30009;
+    const long UIA_IsEnabledPropertyId                            = 30010;
+    const long UIA_AutomationIdPropertyId                         = 30011;
+    const long UIA_ClassNamePropertyId                            = 30012;
+    const long UIA_HelpTextPropertyId                             = 30013;
+    const long UIA_ClickablePointPropertyId                       = 30014;
+    const long UIA_CulturePropertyId                              = 30015;
+    const long UIA_IsControlElementPropertyId                     = 30016;
+    const long UIA_IsContentElementPropertyId                     = 30017;
+    const long UIA_LabeledByPropertyId                            = 30018;
+    const long UIA_IsPasswordPropertyId                           = 30019;
+    const long UIA_NativeWindowHandlePropertyId                   = 30020;
+    const long UIA_ItemTypePropertyId                             = 30021;
+    const long UIA_IsOffscreenPropertyId                          = 30022;
+    const long UIA_OrientationPropertyId                          = 30023;
+    const long UIA_FrameworkIdPropertyId                          = 30024;
+    const long UIA_IsRequiredForFormPropertyId                    = 30025;
+    const long UIA_ItemStatusPropertyId                           = 30026;
+    const long UIA_IsDockPatternAvailablePropertyId               = 30027;
+    const long UIA_IsExpandCollapsePatternAvailablePropertyId     = 30028;
+    const long UIA_IsGridItemPatternAvailablePropertyId           = 30029;
+    const long UIA_IsGridPatternAvailablePropertyId               = 30030;
+    const long UIA_IsInvokePatternAvailablePropertyId             = 30031;
+    const long UIA_IsMultipleViewPatternAvailablePropertyId       = 30032;
+    const long UIA_IsRangeValuePatternAvailablePropertyId         = 30033;
+    const long UIA_IsScrollPatternAvailablePropertyId             = 30034;
+    const long UIA_IsScrollItemPatternAvailablePropertyId         = 30035;
+    const long UIA_IsSelectionItemPatternAvailablePropertyId      = 30036;
+    const long UIA_IsSelectionPatternAvailablePropertyId          = 30037;
+    const long UIA_IsTablePatternAvailablePropertyId              = 30038;
+    const long UIA_IsTableItemPatternAvailablePropertyId          = 30039;
+    const long UIA_IsTextPatternAvailablePropertyId               = 30040;
+    const long UIA_IsTogglePatternAvailablePropertyId             = 30041;
+    const long UIA_IsTransformPatternAvailablePropertyId          = 30042;
+    const long UIA_IsValuePatternAvailablePropertyId              = 30043;
+    const long UIA_IsWindowPatternAvailablePropertyId             = 30044;
+    const long UIA_ValueValuePropertyId                           = 30045;
+    const long UIA_ValueIsReadOnlyPropertyId                      = 30046;
+    const long UIA_RangeValueValuePropertyId                      = 30047;
+    const long UIA_RangeValueIsReadOnlyPropertyId                 = 30048;
+    const long UIA_RangeValueMinimumPropertyId                    = 30049;
+    const long UIA_RangeValueMaximumPropertyId                    = 30050;
+    const long UIA_RangeValueLargeChangePropertyId                = 30051;
+    const long UIA_RangeValueSmallChangePropertyId                = 30052;
+    const long UIA_ScrollHorizontalScrollPercentPropertyId        = 30053;
+    const long UIA_ScrollHorizontalViewSizePropertyId             = 30054;
+    const long UIA_ScrollVerticalScrollPercentPropertyId          = 30055;
+    const long UIA_ScrollVerticalViewSizePropertyId               = 30056;
+    const long UIA_ScrollHorizontallyScrollablePropertyId         = 30057;
+    const long UIA_ScrollVerticallyScrollablePropertyId           = 30058;
+    const long UIA_SelectionSelectionPropertyId                   = 30059;
+    const long UIA_SelectionCanSelectMultiplePropertyId           = 30060;
+    const long UIA_SelectionIsSelectionRequiredPropertyId         = 30061;
+    const long UIA_GridRowCountPropertyId                         = 30062;
+    const long UIA_GridColumnCountPropertyId                      = 30063;
+    const long UIA_GridItemRowPropertyId                          = 30064;
+    const long UIA_GridItemColumnPropertyId                       = 30065;
+    const long UIA_GridItemRowSpanPropertyId                      = 30066;
+    const long UIA_GridItemColumnSpanPropertyId                   = 30067;
+    const long UIA_GridItemContainingGridPropertyId               = 30068;
+    const long UIA_DockDockPositionPropertyId                     = 30069;
+    const long UIA_ExpandCollapseExpandCollapseStatePropertyId    = 30070;
+    const long UIA_MultipleViewCurrentViewPropertyId              = 30071;
+    const long UIA_MultipleViewSupportedViewsPropertyId           = 30072;
+    const long UIA_WindowCanMaximizePropertyId                    = 30073;
+    const long UIA_WindowCanMinimizePropertyId                    = 30074;
+    const long UIA_WindowWindowVisualStatePropertyId              = 30075;
+    const long UIA_WindowWindowInteractionStatePropertyId         = 30076;
+    const long UIA_WindowIsModalPropertyId                        = 30077;
+    const long UIA_WindowIsTopmostPropertyId                      = 30078;
+    const long UIA_SelectionItemIsSelectedPropertyId              = 30079;
+    const long UIA_SelectionItemSelectionContainerPropertyId      = 30080;
+    const long UIA_TableRowHeadersPropertyId                      = 30081;
+    const long UIA_TableColumnHeadersPropertyId                   = 30082;
+    const long UIA_TableRowOrColumnMajorPropertyId                = 30083;
+    const long UIA_TableItemRowHeaderItemsPropertyId              = 30084;
+    const long UIA_TableItemColumnHeaderItemsPropertyId           = 30085;
+    const long UIA_ToggleToggleStatePropertyId                    = 30086;
+    const long UIA_TransformCanMovePropertyId                     = 30087;
+    const long UIA_TransformCanResizePropertyId                   = 30088;
+    const long UIA_TransformCanRotatePropertyId                   = 30089;
+    const long UIA_IsLegacyIAccessiblePatternAvailablePropertyId  = 30090;
+    const long UIA_LegacyIAccessibleChildIdPropertyId             = 30091;
+    const long UIA_LegacyIAccessibleNamePropertyId                = 30092;
+    const long UIA_LegacyIAccessibleValuePropertyId               = 30093;
+    const long UIA_LegacyIAccessibleDescriptionPropertyId         = 30094;
+    const long UIA_LegacyIAccessibleRolePropertyId                = 30095;
+    const long UIA_LegacyIAccessibleStatePropertyId               = 30096;
+    const long UIA_LegacyIAccessibleHelpPropertyId                = 30097;
+    const long UIA_LegacyIAccessibleKeyboardShortcutPropertyId    = 30098;
+    const long UIA_LegacyIAccessibleSelectionPropertyId           = 30099;
+    const long UIA_LegacyIAccessibleDefaultActionPropertyId       = 30100;
+    const long UIA_AriaRolePropertyId                             = 30101;
+    const long UIA_AriaPropertiesPropertyId                       = 30102;
+    const long UIA_IsDataValidForFormPropertyId                   = 30103;
+    const long UIA_ControllerForPropertyId                        = 30104;
+    const long UIA_DescribedByPropertyId                          = 30105;
+    const long UIA_FlowsToPropertyId                              = 30106;
+    const long UIA_ProviderDescriptionPropertyId                  = 30107;
+    const long UIA_IsItemContainerPatternAvailablePropertyId      = 30108;
+    const long UIA_IsVirtualizedItemPatternAvailablePropertyId    = 30109;
+    const long UIA_IsSynchronizedInputPatternAvailablePropertyId  = 30110;
+    const long UIA_OptimizeForVisualContentPropertyId             = 30111;
+    const long UIA_IsObjectModelPatternAvailablePropertyId        = 30112;
+    const long UIA_AnnotationAnnotationTypeIdPropertyId           = 30113;
+    const long UIA_AnnotationAnnotationTypeNamePropertyId         = 30114;
+    const long UIA_AnnotationAuthorPropertyId                     = 30115;
+    const long UIA_AnnotationDateTimePropertyId                   = 30116;
+    const long UIA_AnnotationTargetPropertyId                     = 30117;
+    const long UIA_IsAnnotationPatternAvailablePropertyId         = 30118;
+    const long UIA_IsTextPattern2AvailablePropertyId              = 30119;
+    const long UIA_StylesStyleIdPropertyId                        = 30120;
+    const long UIA_StylesStyleNamePropertyId                      = 30121;
+    const long UIA_StylesFillColorPropertyId                      = 30122;
+    const long UIA_StylesFillPatternStylePropertyId               = 30123;
+    const long UIA_StylesShapePropertyId                          = 30124;
+    const long UIA_StylesFillPatternColorPropertyId               = 30125;
+    const long UIA_StylesExtendedPropertiesPropertyId             = 30126;
+    const long UIA_IsStylesPatternAvailablePropertyId             = 30127;
+    const long UIA_IsSpreadsheetPatternAvailablePropertyId        = 30128;
+    const long UIA_SpreadsheetItemFormulaPropertyId               = 30129;
+    const long UIA_SpreadsheetItemAnnotationObjectsPropertyId     = 30130;
+    const long UIA_SpreadsheetItemAnnotationTypesPropertyId       = 30131;
+    const long UIA_IsSpreadsheetItemPatternAvailablePropertyId    = 30132;
+    const long UIA_Transform2CanZoomPropertyId                    = 30133;
+    const long UIA_IsTransformPattern2AvailablePropertyId         = 30134;
+    const long UIA_LiveSettingPropertyId                          = 30135;
+    const long UIA_IsTextChildPatternAvailablePropertyId          = 30136;
+    const long UIA_IsDragPatternAvailablePropertyId               = 30137;
+    const long UIA_DragIsGrabbedPropertyId                        = 30138;
+    const long UIA_DragDropEffectPropertyId                       = 30139;
+    const long UIA_DragDropEffectsPropertyId                      = 30140;
+    const long UIA_IsDropTargetPatternAvailablePropertyId         = 30141;
+    const long UIA_DropTargetDropTargetEffectPropertyId           = 30142;
+    const long UIA_DropTargetDropTargetEffectsPropertyId          = 30143;
+    const long UIA_DragGrabbedItemsPropertyId                     = 30144;
+    const long UIA_Transform2ZoomLevelPropertyId                  = 30145;
+    const long UIA_Transform2ZoomMinimumPropertyId                = 30146;
+    const long UIA_Transform2ZoomMaximumPropertyId                = 30147;
+    const long UIA_FlowsFromPropertyId                            = 30148;
+    const long UIA_IsTextEditPatternAvailablePropertyId           = 30149;
+    const long UIA_IsPeripheralPropertyId                         = 30150;
+    const long UIA_IsCustomNavigationPatternAvailablePropertyId   = 30151;
+    const long UIA_PositionInSetPropertyId                        = 30152;
+    const long UIA_SizeOfSetPropertyId                            = 30153;
+    const long UIA_LevelPropertyId                                = 30154;
+    const long UIA_AnnotationTypesPropertyId                      = 30155;
+    const long UIA_AnnotationObjectsPropertyId                    = 30156;
+    const long UIA_LandmarkTypePropertyId                         = 30157;
+    const long UIA_LocalizedLandmarkTypePropertyId                = 30158;
+    const long UIA_FullDescriptionPropertyId                      = 30159;
+    const long UIA_FillColorPropertyId                            = 30160;
+    const long UIA_OutlineColorPropertyId                         = 30161;
+    const long UIA_FillTypePropertyId                             = 30162;
+    const long UIA_VisualEffectsPropertyId                        = 30163;
+    const long UIA_OutlineThicknessPropertyId                     = 30164;
+    const long UIA_CenterPointPropertyId                          = 30165;
+    const long UIA_RotationPropertyId                             = 30166;
+    const long UIA_SizePropertyId                                 = 30167;
+    const long UIA_IsSelectionPattern2AvailablePropertyId         = 30168;
+    const long UIA_Selection2FirstSelectedItemPropertyId          = 30169;
+    const long UIA_Selection2LastSelectedItemPropertyId           = 30170;
+    const long UIA_Selection2CurrentSelectedItemPropertyId        = 30171;
+    const long UIA_Selection2ItemCountPropertyId                  = 30172;
+    const long UIA_HeadingLevelPropertyId                         = 30173;
+    const long UIA_IsDialogPropertyId                             = 30174;
+}
+
+module UIA_ControlTypeIds
+{
+    const long UIA_ButtonControlTypeId        = 50000;
+    const long UIA_CalendarControlTypeId      = 50001;
+    const long UIA_CheckBoxControlTypeId      = 50002;
+    const long UIA_ComboBoxControlTypeId      = 50003;
+    const long UIA_EditControlTypeId          = 50004;
+    const long UIA_HyperlinkControlTypeId     = 50005;
+    const long UIA_ImageControlTypeId         = 50006;
+    const long UIA_ListItemControlTypeId      = 50007;
+    const long UIA_ListControlTypeId          = 50008;
+    const long UIA_MenuControlTypeId          = 50009;
+    const long UIA_MenuBarControlTypeId       = 50010;
+    const long UIA_MenuItemControlTypeId      = 50011;
+    const long UIA_ProgressBarControlTypeId   = 50012;
+    const long UIA_RadioButtonControlTypeId   = 50013;
+    const long UIA_ScrollBarControlTypeId     = 50014;
+    const long UIA_SliderControlTypeId        = 50015;
+    const long UIA_SpinnerControlTypeId       = 50016;
+    const long UIA_StatusBarControlTypeId     = 50017;
+    const long UIA_TabControlTypeId           = 50018;
+    const long UIA_TabItemControlTypeId       = 50019;
+    const long UIA_TextControlTypeId          = 50020;
+    const long UIA_ToolBarControlTypeId       = 50021;
+    const long UIA_ToolTipControlTypeId       = 50022;
+    const long UIA_TreeControlTypeId          = 50023;
+    const long UIA_TreeItemControlTypeId      = 50024;
+    const long UIA_CustomControlTypeId        = 50025;
+    const long UIA_GroupControlTypeId         = 50026;
+    const long UIA_ThumbControlTypeId         = 50027;
+    const long UIA_DataGridControlTypeId      = 50028;
+    const long UIA_DataItemControlTypeId      = 50029;
+    const long UIA_DocumentControlTypeId      = 50030;
+    const long UIA_SplitButtonControlTypeId   = 50031;
+    const long UIA_WindowControlTypeId        = 50032;
+    const long UIA_PaneControlTypeId          = 50033;
+    const long UIA_HeaderControlTypeId        = 50034;
+    const long UIA_HeaderItemControlTypeId    = 50035;
+    const long UIA_TableControlTypeId         = 50036;
+    const long UIA_TitleBarControlTypeId      = 50037;
+    const long UIA_SeparatorControlTypeId     = 50038;
+    const long UIA_SemanticZoomControlTypeId  = 50039;
+    const long UIA_AppBarControlTypeId        = 50040;
+};
+
+// ---- インターフェイス（UIAutomationClient.idl の並びのまま）
+interface IUIAutomationElement;
+interface IUIAutomationElementArray;
+
+[object, uuid(352ffba8-0973-437c-a61f-f64cafd81df9), pointer_default(unique)]
+interface IUIAutomationCondition : IUnknown
+{
+}
+
+[object, uuid(b32a92b5-bc25-4078-9c08-d7ee95c48e03), pointer_default(unique)]
+interface IUIAutomationCacheRequest : IUnknown
+{
+    HRESULT AddProperty (
+        [in] PROPERTYID propertyId );
+
+    HRESULT AddPattern (
+        [in] PATTERNID patternId );
+
+    HRESULT Clone (
+        [out, retval] IUIAutomationCacheRequest ** clonedRequest );
+
+    [propget] HRESULT TreeScope (
+        [out, retval] enum TreeScope * scope );
+
+    [propput] HRESULT TreeScope (
+        [in] enum TreeScope scope );
+
+    [propget] HRESULT TreeFilter (
+        [out, retval] IUIAutomationCondition ** filter );
+
+    [propput] HRESULT TreeFilter (
+        [in] IUIAutomationCondition * filter );
+
+    [propget] HRESULT AutomationElementMode (
+        [out, retval] enum AutomationElementMode * mode );
+
+    [propput] HRESULT AutomationElementMode (
+        [in] enum AutomationElementMode mode );
+
+}
+
+[object, uuid(fb377fbe-8ea6-46d5-9c73-6499642d3059), pointer_default(unique)]
+interface IUIAutomationInvokePattern : IUnknown
+{
+    HRESULT Invoke ( );
+
+}
+
+[object, uuid(619be086-1f4e-4ee4-bafa-210128738730), pointer_default(unique)]
+interface IUIAutomationExpandCollapsePattern : IUnknown
+{
+    HRESULT Expand ( );
+
+    HRESULT Collapse ( );
+
+    [propget] HRESULT CurrentExpandCollapseState (
+        [out, retval] enum ExpandCollapseState * retVal );
+
+    [propget] HRESULT CachedExpandCollapseState (
+        [out, retval] enum ExpandCollapseState * retVal );
+}
+
+[object, uuid(5ed5202e-b2ac-47a6-b638-4b0bf140d78e), pointer_default(unique)]
+interface IUIAutomationSelectionPattern : IUnknown
+{
+    HRESULT GetCurrentSelection (
+        [out, retval] IUIAutomationElementArray ** retVal );
+
+    [propget] HRESULT CurrentCanSelectMultiple (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentIsSelectionRequired (
+        [out, retval] BOOL * retVal );
+
+    HRESULT GetCachedSelection (
+        [out, retval] IUIAutomationElementArray ** retVal );
+
+    [propget] HRESULT CachedCanSelectMultiple (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedIsSelectionRequired (
+        [out, retval] BOOL * retVal );
+}
+
+[object, uuid(a8efa66a-0fda-421a-9194-38021f3578ea), pointer_default(unique)]
+interface IUIAutomationSelectionItemPattern : IUnknown
+{
+    HRESULT Select ( );
+
+    HRESULT AddToSelection ( );
+
+    HRESULT RemoveFromSelection ( );
+
+    [propget] HRESULT CurrentIsSelected (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentSelectionContainer (
+        [out, retval] IUIAutomationElement ** retVal );
+
+    [propget] HRESULT CachedIsSelected (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedSelectionContainer (
+        [out, retval] IUIAutomationElement ** retVal );
+}
+
+[object, uuid(94cf8058-9b8d-4ab9-8bfd-4cd0a33c8c70), pointer_default(unique)]
+interface IUIAutomationTogglePattern : IUnknown
+{
+    HRESULT Toggle ( );
+
+    [propget] HRESULT CurrentToggleState (
+        [out, retval] enum ToggleState * retVal );
+
+    [propget] HRESULT CachedToggleState (
+        [out, retval] enum ToggleState * retVal );
+}
+
+[object, uuid(a94cd8b1-0844-4cd6-9d2d-640537ab39e9), pointer_default(unique)]
+interface IUIAutomationValuePattern : IUnknown
+{
+    HRESULT SetValue (
+        [in] BSTR val );
+
+    [propget] HRESULT CurrentValue (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentIsReadOnly (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedValue (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedIsReadOnly (
+        [out, retval] BOOL * retVal );
+}
+
+[object, uuid(d22108aa-8ac5-49a5-837b-37bbb3d7591e), pointer_default(unique)]
+interface IUIAutomationElement : IUnknown
+{
+    HRESULT SetFocus ( );
+
+    HRESULT GetRuntimeId (
+        [out, retval] SAFEARRAY(int) * runtimeId );
+
+    HRESULT FindFirst (
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCondition * condition,
+        [out, retval] IUIAutomationElement ** found );
+
+    HRESULT FindAll (
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCondition * condition,
+        [out, retval] IUIAutomationElementArray ** found );
+
+    HRESULT FindFirstBuildCache (
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCondition * condition,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** found );
+
+    HRESULT FindAllBuildCache (
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCondition * condition,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElementArray ** found );
+
+    HRESULT BuildUpdatedCache (
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** updatedElement );
+
+    HRESULT GetCurrentPropertyValue (
+        [in] PROPERTYID propertyId,
+        [out, retval] VARIANT * retVal);
+
+    HRESULT GetCurrentPropertyValueEx (
+        [in] PROPERTYID propertyId,
+        [in] BOOL ignoreDefaultValue,
+        [out, retval] VARIANT * retVal );
+
+    HRESULT GetCachedPropertyValue (
+        [in] PROPERTYID propertyId,
+        [out, retval] VARIANT * retVal );
+
+    HRESULT GetCachedPropertyValueEx (
+        [in] PROPERTYID propertyId,
+        [in] BOOL ignoreDefaultValue,
+        [out, retval] VARIANT * retVal );
+
+
+    // These versions exist to simplify using these methods, avoiding the extra Query
+    // Interface step that inevitably follows getting the Pattern.
+    HRESULT GetCurrentPatternAs (
+        [in] PATTERNID patternId,
+        [in] REFIID riid,
+        [out, iid_is(riid), retval] void ** patternObject );
+
+    HRESULT GetCachedPatternAs (
+        [in] PATTERNID patternId,
+        [in] REFIID riid,
+        [out, iid_is(riid), retval] void ** patternObject );
+
+    // These versions are better for managed code, or code that wants a generalized
+    // handling path, they return as pure IUnknowns
+    HRESULT GetCurrentPattern (
+        [in] PATTERNID patternId,
+        [out, retval] IUnknown ** patternObject );
+
+    HRESULT GetCachedPattern (
+        [in] PATTERNID patternId,
+        [out, retval] IUnknown ** patternObject );
+
+    HRESULT GetCachedParent (
+        [out, retval] IUIAutomationElement ** parent );
+
+    HRESULT GetCachedChildren (
+        [out, retval] IUIAutomationElementArray ** children );
+
+    // Current Property Getters (for convenience)
+    [propget] HRESULT CurrentProcessId (
+        [out, retval] int * retVal );
+
+    [propget] HRESULT CurrentControlType (
+        [out, retval] CONTROLTYPEID * retVal );
+
+    [propget] HRESULT CurrentLocalizedControlType (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentName (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentAcceleratorKey (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentAccessKey (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentHasKeyboardFocus (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentIsKeyboardFocusable (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentIsEnabled (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentAutomationId (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentClassName (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentHelpText (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentCulture (
+        [out, retval] int * retVal );
+
+    [propget] HRESULT CurrentIsControlElement (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentIsContentElement (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentIsPassword (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentNativeWindowHandle (
+        [out, retval] UIA_HWND * retVal );
+
+    [propget] HRESULT CurrentItemType (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentIsOffscreen (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentOrientation (
+        [out, retval] enum OrientationType * retVal );
+
+    [propget] HRESULT CurrentFrameworkId (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentIsRequiredForForm (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentItemStatus (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentBoundingRectangle (
+        [out, retval] RECT * retVal );
+
+    [propget] HRESULT CurrentLabeledBy (
+        [out, retval] IUIAutomationElement ** retVal );        
+
+    [propget] HRESULT CurrentAriaRole (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentAriaProperties (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CurrentIsDataValidForForm (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CurrentControllerFor (
+        [out, retval] IUIAutomationElementArray ** retVal ); 
+
+    [propget] HRESULT CurrentDescribedBy (
+        [out, retval] IUIAutomationElementArray ** retVal );
+
+    [propget] HRESULT CurrentFlowsTo (
+        [out, retval] IUIAutomationElementArray ** retVal );
+
+    [propget] HRESULT CurrentProviderDescription (
+        [out, retval] BSTR * retVal );        
+
+    // Cached Property Getters (for convenience)
+    [propget] HRESULT CachedProcessId (
+        [out, retval] int * retVal );
+
+    [propget] HRESULT CachedControlType (
+        [out, retval] CONTROLTYPEID * retVal );
+
+    [propget] HRESULT CachedLocalizedControlType (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedName (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedAcceleratorKey (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedAccessKey (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedHasKeyboardFocus (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedIsKeyboardFocusable (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedIsEnabled (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedAutomationId (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedClassName (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedHelpText (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedCulture (
+        [out, retval] int * retVal );
+
+    [propget] HRESULT CachedIsControlElement (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedIsContentElement (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedIsPassword (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedNativeWindowHandle (
+        [out, retval] UIA_HWND * retVal );
+
+    [propget] HRESULT CachedItemType (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedIsOffscreen (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedOrientation (
+        [out, retval] enum OrientationType * retVal );
+
+    [propget] HRESULT CachedFrameworkId (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedIsRequiredForForm (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedItemStatus (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedBoundingRectangle (
+        [out, retval] RECT * retVal );
+
+    [propget] HRESULT CachedLabeledBy (
+        [out, retval] IUIAutomationElement ** retVal );
+
+    [propget] HRESULT CachedAriaRole (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedAriaProperties (
+        [out, retval] BSTR * retVal );
+
+    [propget] HRESULT CachedIsDataValidForForm (
+        [out, retval] BOOL * retVal );
+
+    [propget] HRESULT CachedControllerFor (
+        [out, retval] IUIAutomationElementArray ** retVal ); 
+
+    [propget] HRESULT CachedDescribedBy (
+        [out, retval] IUIAutomationElementArray ** retVal );
+
+    [propget] HRESULT CachedFlowsTo (
+        [out, retval] IUIAutomationElementArray ** retVal );
+
+    [propget] HRESULT CachedProviderDescription (
+        [out, retval] BSTR * retVal );        
+
+    // Clickable point helper
+    HRESULT GetClickablePoint(
+        [out] POINT * clickable,
+        [out, retval] BOOL * gotClickable );
+}
+
+[object, uuid(14314595-b4bc-4055-95f2-58f2e42c9855), pointer_default(unique)]
+interface IUIAutomationElementArray : IUnknown
+{
+    [propget] HRESULT Length (
+        [out, retval] int * length );
+
+    HRESULT GetElement (
+        [in] int index,
+        [out, retval] IUIAutomationElement ** element );
+}
+
+[object, uuid(30cbe57d-d9d0-452a-ab13-7ac5ac4825ee), pointer_default(unique)]
+interface IUIAutomation : IUnknown
+{
+    // Comparisons
+    HRESULT CompareElements (
+        [in] IUIAutomationElement * el1,
+        [in] IUIAutomationElement * el2,
+        [out, retval] BOOL * areSame );
+
+    HRESULT CompareRuntimeIds (
+        [in] SAFEARRAY(int) runtimeId1,
+        [in] SAFEARRAY(int) runtimeId2,
+        [out, retval] BOOL * areSame);
+
+    // Automation Element fetching
+    HRESULT GetRootElement (
+        [out, retval] IUIAutomationElement ** root );
+
+    HRESULT ElementFromHandle (
+        [in] UIA_HWND hwnd,
+        [out, retval] IUIAutomationElement ** element );
+
+    HRESULT ElementFromPoint (
+        [in] POINT pt,
+        [out, retval] IUIAutomationElement ** element );
+
+    HRESULT GetFocusedElement (
+        [out, retval] IUIAutomationElement ** element );
+
+    HRESULT GetRootElementBuildCache (
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** root );
+
+    HRESULT ElementFromHandleBuildCache (
+        [in] UIA_HWND hwnd,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** element );
+
+    HRESULT ElementFromPointBuildCache (
+        [in] POINT pt,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** element );
+
+    HRESULT GetFocusedElementBuildCache (
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** element );
+
+    // Tree Walker Creation
+    HRESULT CreateTreeWalker (
+        [in] IUIAutomationCondition * pCondition,
+        [out, retval] IUIAutomationTreeWalker ** walker );
+
+    [propget] HRESULT ControlViewWalker (
+        [out, retval] IUIAutomationTreeWalker ** walker );
+
+    [propget] HRESULT ContentViewWalker (
+        [out, retval] IUIAutomationTreeWalker ** walker );
+
+    [propget] HRESULT RawViewWalker (
+        [out, retval] IUIAutomationTreeWalker ** walker );
+
+    [propget] HRESULT RawViewCondition (
+        [out, retval] IUIAutomationCondition ** condition );
+
+    [propget] HRESULT ControlViewCondition (
+        [out, retval] IUIAutomationCondition ** condition );
+
+    [propget] HRESULT ContentViewCondition (
+        [out, retval] IUIAutomationCondition ** condition );
+
+
+    // Cache Request Creation
+    HRESULT CreateCacheRequest (
+        [out, retval] IUIAutomationCacheRequest ** cacheRequest );
+
+
+    // Condition Creation
+    HRESULT CreateTrueCondition (
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateFalseCondition (
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreatePropertyCondition (
+        [in] PROPERTYID propertyId,
+        [in] VARIANT value,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreatePropertyConditionEx (
+        [in] PROPERTYID propertyId,
+        [in] VARIANT value,
+        [in] enum PropertyConditionFlags flags,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateAndCondition (
+        [in] IUIAutomationCondition * condition1,
+        [in] IUIAutomationCondition * condition2,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateAndConditionFromArray (
+        [in] SAFEARRAY(IUIAutomationCondition) conditions,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateAndConditionFromNativeArray (
+        [in, size_is(conditionCount)] IUIAutomationCondition ** conditions,
+        [in] int conditionCount,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateOrCondition (
+        [in] IUIAutomationCondition * condition1,
+        [in] IUIAutomationCondition * condition2,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateOrConditionFromArray (
+        [in] SAFEARRAY(IUIAutomationCondition) conditions,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateOrConditionFromNativeArray (
+        [in, size_is(conditionCount)] IUIAutomationCondition ** conditions,
+        [in] int conditionCount,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    HRESULT CreateNotCondition (
+        [in] IUIAutomationCondition * condition,
+        [out, retval] IUIAutomationCondition ** newCondition );
+
+    // Event Registration and Removal
+    HRESULT AddAutomationEventHandler (
+        [in] EVENTID eventId,
+        [in] IUIAutomationElement * element,
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [in] IUIAutomationEventHandler * handler );
+
+    HRESULT RemoveAutomationEventHandler (
+        [in] EVENTID eventId,
+        [in] IUIAutomationElement * element,
+        [in] IUIAutomationEventHandler * handler );
+
+    HRESULT AddPropertyChangedEventHandlerNativeArray (
+        [in] IUIAutomationElement * element,
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [in] IUIAutomationPropertyChangedEventHandler * handler,
+        [in, size_is(propertyCount)] PROPERTYID * propertyArray,
+        [in] int propertyCount );
+
+    HRESULT AddPropertyChangedEventHandler (
+        [in] IUIAutomationElement * element,
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [in] IUIAutomationPropertyChangedEventHandler * handler,
+        [in] SAFEARRAY(PROPERTYID) propertyArray );
+
+    HRESULT RemovePropertyChangedEventHandler (
+        [in] IUIAutomationElement * element,
+        [in] IUIAutomationPropertyChangedEventHandler * handler );
+
+    HRESULT AddStructureChangedEventHandler (
+        [in] IUIAutomationElement * element,
+        [in] enum TreeScope scope,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [in] IUIAutomationStructureChangedEventHandler * handler );
+
+    HRESULT RemoveStructureChangedEventHandler (
+        [in] IUIAutomationElement * element,
+        [in] IUIAutomationStructureChangedEventHandler * handler );
+
+    HRESULT AddFocusChangedEventHandler (
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [in] IUIAutomationFocusChangedEventHandler * handler );
+
+    HRESULT RemoveFocusChangedEventHandler (
+        [in] IUIAutomationFocusChangedEventHandler * handler );
+
+    HRESULT RemoveAllEventHandlers ( );
+
+    // Conversion helpers
+    HRESULT IntNativeArrayToSafeArray (
+        [in, size_is(arrayCount)] int * array,
+        [in] int arrayCount,
+        [out, retval] SAFEARRAY(int) * safeArray );
+
+    HRESULT IntSafeArrayToNativeArray (
+        [in] SAFEARRAY(int) intArray,
+        [out, size_is( ,*arrayCount)] int ** array,
+        [out, retval] int * arrayCount );
+
+    HRESULT RectToVariant (
+        [in] RECT rc,
+        [out, retval] VARIANT * var );
+
+    HRESULT VariantToRect (
+        [in] VARIANT var,
+        [out, retval] RECT * rc );
+
+    HRESULT SafeArrayToRectNativeArray (
+        [in] SAFEARRAY(double) rects,
+        [out, size_is( ,*rectArrayCount)] RECT ** rectArray,
+        [out, retval] int * rectArrayCount );
+
+    // Proxy registration
+    HRESULT CreateProxyFactoryEntry(
+        [in] IUIAutomationProxyFactory *factory,
+        [out, retval] IUIAutomationProxyFactoryEntry **factoryEntry );
+
+    [propget] HRESULT ProxyFactoryMapping(
+        [out, retval] IUIAutomationProxyFactoryMapping **factoryMapping );
+
+    // Name Lookup
+    HRESULT GetPropertyProgrammaticName(
+        [in] PROPERTYID property,
+        [out, retval] BSTR * name );
+
+    HRESULT GetPatternProgrammaticName(
+        [in] PATTERNID pattern,
+        [out, retval] BSTR * name );
+
+    // Return potentially supported patterns. Note that object may not actually
+    // support the pattern when asked for it later.
+    HRESULT PollForPotentialSupportedPatterns(
+        [in] IUIAutomationElement * pElement,
+        [out] SAFEARRAY(int) * patternIds,
+        [out] SAFEARRAY(BSTR) * patternNames);
+
+    // Return potentially supported properties. Note that object may not actually
+    // support all properties when asked.
+    HRESULT PollForPotentialSupportedProperties(
+        [in] IUIAutomationElement * pElement,
+        [out] SAFEARRAY(int) * propertyIds,
+        [out] SAFEARRAY(BSTR) * propertyNames);
+
+    // Check whether this variant (returned from GetPropertyValue) is the NotSupported item.
+    HRESULT CheckNotSupported(
+        [in] VARIANT value,
+        [out, retval] BOOL * isNotSupported);
+
+    // Get the "Not Supported" object
+    [propget] HRESULT ReservedNotSupportedValue(
+        [out, retval] IUnknown **notSupportedValue);
+
+    // Get the "Mixed Attribute" object
+    [propget] HRESULT ReservedMixedAttributeValue(
+        [out, retval] IUnknown **mixedAttributeValue);
+
+    // IAccessible interop
+    HRESULT ElementFromIAccessible (
+        [in] IAccessible * accessible,
+        [in] int childId,
+        [out, retval] IUIAutomationElement ** element );
+
+    HRESULT ElementFromIAccessibleBuildCache (
+        [in] IAccessible * accessible,
+        [in] int childId,
+        [in] IUIAutomationCacheRequest * cacheRequest,
+        [out, retval] IUIAutomationElement ** element );
+}
+
+[object, uuid(34723aff-0c9d-49d0-9896-7ab52df8cd8a), pointer_default(unique)]
+interface IUIAutomation2 : IUIAutomation
+{
+    // Mode to set focus automatically when element methods are called
+    [propget] HRESULT AutoSetFocus (
+        [out, retval] BOOL * autoSetFocus );
+
+    [propput] HRESULT AutoSetFocus (
+        [in] BOOL autoSetFocus );
+
+    // Adjust timeout (in milliseconds) for connecting to an element.
+    [propget] HRESULT ConnectionTimeout (
+        [out, retval] DWORD * timeout );
+
+    [propput] HRESULT ConnectionTimeout (
+        [in] DWORD timeout );
+
+    // Adjust timeout (in milliseconds) for interacting with an element after connecting to it.
+    [propget] HRESULT TransactionTimeout (
+        [out, retval] DWORD * timeout );
+
+    [propput] HRESULT TransactionTimeout (
+        [in] DWORD timeout );
+}

@@ -1,0 +1,30 @@
+// スモーク試験 Test-AsyncStack の対象: await のあとで再開した async メソッドの、論理的な呼び出し元。
+using System;
+using System.Threading.Tasks;
+
+static class Program
+{
+    static async Task<int> Inner()
+    {
+        await Task.Delay(50);
+        return 42; // @inner
+    }
+
+    static async Task<int> Middle()
+    {
+        await Task.Delay(10);
+        return await Inner() + 1; // @middle
+    }
+
+    static async Task Outer()
+    {
+        int x = await Middle(); // @outer
+        Console.WriteLine(x);
+    }
+
+    static async Task Main()
+    {
+        await Outer(); // @main
+        Console.WriteLine("done");
+    }
+}

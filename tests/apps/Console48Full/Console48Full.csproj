@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows PDB（古い形式のプロジェクトの既定）の対象。読めない PDB のときの案内を確かめる。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <DebugType>full</DebugType>
+    <AssemblyName>SmokeConsole48Full</AssemblyName>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- 適合試験のポインターの式 (Conformance.Run の終わりの unsafe ブロック)。 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Console\Program.cs" />
+    <!-- 適合試験の dynamic に要る (.NET Framework では、既定で参照しない)。 -->
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+</Project>

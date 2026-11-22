@@ -1,0 +1,10 @@
+// 古い形のプロジェクト (Legacy.csproj.txt) の Properties\AssemblyInfo.cs (Visual Studio のテンプレートと同じ)。
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+[assembly: AssemblyTitle("SmokeEnc")]
+[assembly: AssemblyProduct("SmokeEnc")]
+[assembly: ComVisible(false)]
+[assembly: Guid("6f2c1d4e-3b7a-4c8e-9d21-5a0b7e3f1c42")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]

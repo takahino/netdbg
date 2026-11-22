@@ -1,0 +1,50 @@
+// スモーク試験 Test-RetentionPath の対象: いろいろな経路で生きているオブジェクト。
+using System;
+using System.Collections.Generic;
+
+class Order
+{
+    public string Name;
+
+    public Order(string name)
+    {
+        Name = name;
+    }
+}
+
+class Cache
+{
+    public List<Order> Items = new List<Order>();
+}
+
+struct Holder
+{
+    public int Id;
+    public Order Value;
+}
+
+static class Program
+{
+    // 静的なフィールドから: Cache → List<Order> → 配列 → 要素。
+    static Cache cache = new Cache();
+    // 構造体の配列の、要素の欄から。
+    static Holder[] holders = new Holder[2];
+
+    // 静的なフィールドに詰めるのは、別のメソッドで行う (Main の中だと、Debug の JIT が式の途中の値を名前の無い置き場所に
+    // 残し、スタックも持ち主になる)。
+    static void Fill()
+    {
+        cache.Items.Add(new Order("a"));
+        cache.Items.Add(new Order("kept"));
+        holders[1].Id = 1;
+        holders[1].Value = new Order("in struct");
+    }
+
+    static void Main()
+    {
+        Fill();
+        var local = new Order("local");
+        Console.WriteLine(local.Name + cache.Items.Count + holders.Length); // @stop
+        GC.KeepAlive(local);
+    }
+}

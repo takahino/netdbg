@@ -1,0 +1,103 @@
+// スモーク試験 Test-Records の対象: ADO.NET のコマンドを実行する（データベースにはつながないので、実行は例外になる）。
+// エンジンの SQL ログ（止めずに読むブレークポイント）が、入口で文とパラメーターを記録できること、例外ログが
+// 捕まえた例外も記録できることを確かめる。
+using System;
+using System.Data;
+#if NETFRAMEWORK
+using System.Data.SqlClient;
+using System.Data.OleDb;
+#else
+using Microsoft.Data.SqlClient;
+using Oracle.ManagedDataAccess.Client;
+#endif
+
+/// イベント トレースの試験用の「コントロール」（Name を持ち、Click を起こす）。
+class Button
+{
+    public string Name { get; set; }
+    public event EventHandler Click;
+
+    public void PerformClick()
+    {
+        Click?.Invoke(this, EventArgs.Empty);
+    }
+}
+
+static class Program
+{
+    static int clicks;
+
+    static void OnClick(object sender, EventArgs e)
+    {
+        clicks++; // @handler
+    }
+    static void Run(Func<int> action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception)
+        {
+            // つながっていないので、実行は失敗する。記録は入口で済んでいる。
+        }
+    }
+
+    static void Fail(int id)
+    {
+        string name = "x" + id;
+        throw new ArgumentException("bad id " + id + " " + name); // @throw
+    }
+
+    static void Main()
+    {
+        // イベント トレース: 名前のあるコントロールから 1 回、名前の無い送り手から 1 回。
+        var ok = new Button { Name = "ok" };
+        ok.Click += OnClick;
+        ok.PerformClick();
+        OnClick(new object(), EventArgs.Empty);
+        // 自分のコードで投げて、自分で捕まえる例外（止まらないが、例外ログには残る）。
+        try
+        {
+            Fail(42);
+        }
+        catch (ArgumentException)
+        {
+        }
+        var command = new SqlCommand("SELECT * FROM Orders WHERE Id = @id AND Name = @name AND Placed >= @when AND Data = @bin AND Note = @note");
+        command.Parameters.AddWithValue("@id", 42);
+        command.Parameters.AddWithValue("@name", "O'Brien");
+        command.Parameters.AddWithValue("@when", new DateTime(2024, 4, 1, 13, 5, 9, 123));
+        command.Parameters.AddWithValue("@bin", new byte[] { 1, 0xAB });
+        command.Parameters.AddWithValue("@note", DBNull.Value);
+        Run(() => command.ExecuteNonQuery());
+        // ExecuteReader() は、中で ExecuteReader(behavior) を呼ぶ。記録は 1 つ。
+        Run(() => { command.ExecuteReader(); return 0; });
+        for (int i = 0; i < 6; i++)
+        {
+            Run(() => new SqlCommand("SELECT 1").ExecuteNonQuery());
+        }
+#if NETFRAMEWORK
+        var other = new OleDbCommand("UPDATE T SET A = ? WHERE B = ?");
+        other.Parameters.AddWithValue("a", "x");
+        other.Parameters.AddWithValue("b", 7);
+        Run(() => other.ExecuteNonQuery());
+#else
+        var other = new OracleCommand("UPDATE T SET A = :a WHERE B = :b");
+        other.BindByName = true;
+        other.Parameters.Add("b", 7);
+        other.Parameters.Add("a", "x");
+        Run(() => other.ExecuteNonQuery());
+#endif
+        // SQL で止める: 条件 (Id が 7) に合う文でだけ止まる。
+        foreach (int auditId in new[] { 8, 7 })
+        {
+            var audit = new SqlCommand("DELETE FROM Audit WHERE Id = @id");
+            audit.Parameters.AddWithValue("@id", auditId);
+            Run(() => audit.ExecuteNonQuery());
+        }
+        // 利用者が同じメソッドに置いたブレークポイントでは、記録したうえで止まる。
+        Run(() => { new SqlCommand("SELECT 2").ExecuteScalar(); return 0; });
+        Console.WriteLine("done"); // @done
+    }
+}

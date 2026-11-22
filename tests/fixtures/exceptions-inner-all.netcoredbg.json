@@ -1,0 +1,168 @@
+{
+    "mode":  "inner",
+    "filters":  [
+                    "all"
+                ],
+    "exceptionBreakpointFilters":  [
+                                       {
+                                           "filter":  "all",
+                                           "label":  "all"
+                                       },
+                                       {
+                                           "filter":  "user-unhandled",
+                                           "label":  "user-unhandled"
+                                       }
+                                   ],
+    "capabilities":  {
+                         "supportsCancelRequest":  true,
+                         "supportsConditionalBreakpoints":  true,
+                         "supportsConfigurationDoneRequest":  true,
+                         "supportsEvaluateForHovers":  true,
+                         "supportsExceptionFilterOptions":  true,
+                         "supportsExceptionInfoRequest":  true,
+                         "supportsExceptionOptions":  false,
+                         "supportsFunctionBreakpoints":  true,
+                         "supportsGotoTargetsRequest":  true,
+                         "supportsSetExpression":  true,
+                         "supportsSetVariable":  true,
+                         "supportsTerminateRequest":  true,
+                         "supportTerminateDebuggee":  true
+                     },
+    "setExceptionBreakpoints":  {
+
+                                },
+    "stops":  [
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "Exception thrown: \u0027System.InvalidOperationException\u0027 in SmokeConsole.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "always",
+                                            "description":  "Exception thrown: \u0027System.InvalidOperationException\u0027 in SmokeConsole.dll: \u0027outer\u0027\n Inner exceptions found, see $exception in variables window for more details.\n Innermost exception: System.FormatException",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.InvalidOperationException** \u0027outer\u0027",
+                                                            "fullTypeName":  "System.InvalidOperationException",
+                                                            "innerException":  [
+                                                                                   {
+                                                                                       "evaluateName":  "$exception",
+                                                                                       "formattedDescription":  "**System.FormatException** \u0027inner\u0027",
+                                                                                       "fullTypeName":  "System.FormatException",
+                                                                                       "message":  "inner",
+                                                                                       "source":  "",
+                                                                                       "stackTrace":  "",
+                                                                                       "typeName":  "FormatException"
+                                                                                   }
+                                                                               ],
+                                                            "message":  "outer",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.Main(String[] args) in <repo>\\tests\\apps\\Console\\Program.cs:line 115",
+                                                            "typeName":  "InvalidOperationException"
+                                                        },
+                                            "exceptionId":  "CLR/System.InvalidOperationException"
+                                        },
+                      "frames":  [
+                                     "Program.Main() Program.cs:115"
+                                 ]
+                  },
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "Exception thrown: \u0027System.ArgumentException\u0027 in SmokeConsole.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "always",
+                                            "description":  "Exception thrown: \u0027System.ArgumentException\u0027 in SmokeConsole.dll: \u0027in task\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.ArgumentException** \u0027in task\u0027",
+                                                            "fullTypeName":  "System.ArgumentException",
+                                                            "message":  "in task",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.ThrowInTask() in <repo>\\tests\\apps\\Console\\Program.cs:line 199",
+                                                            "typeName":  "ArgumentException"
+                                                        },
+                                            "exceptionId":  "CLR/System.ArgumentException"
+                                        },
+                      "frames":  [
+                                     "Program.ThrowInTask() Program.cs:199",
+                                     "Program.\u003c\u003ec.\u003cMain\u003eb__5_1() Program.cs:120",
+                                     "System.Threading.Tasks.Task\u003cint\u003e.InnerInvoke() :0",
+                                     "System.Threading.Tasks.Task.\u003c\u003ec.\u003c.cctor\u003eb__288_0() :0",
+                                     "System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop() :0",
+                                     "System.Threading.Tasks.Task.ExecuteWithThreadLocal() :0",
+                                     "System.Threading.Tasks.Task.ExecuteEntryUnsafe() :0",
+                                     "System.Threading.Tasks.Task.ExecuteFromThreadPool() :0",
+                                     "System.Threading.ThreadPoolWorkQueue.Dispatch() :0",
+                                     "System.Threading.PortableThreadPool.WorkerThread.WorkerThreadStart() :0",
+                                     "System.Threading.Thread.StartCallback() :0"
+                                 ]
+                  },
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "Exception thrown: \u0027System.ArgumentException\u0027 in System.Private.CoreLib.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "always",
+                                            "description":  "Exception thrown: \u0027System.ArgumentException\u0027 in SmokeConsole.dll: \u0027in task\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.ArgumentException** \u0027in task\u0027",
+                                                            "fullTypeName":  "System.ArgumentException",
+                                                            "message":  "in task",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.ThrowInTask() in <repo>\\tests\\apps\\Console\\Program.cs:line 199\r\n   at Program.\u003c\u003ec.\u003cMain\u003eb__5_1() in <repo>\\tests\\apps\\Console\\Program.cs:line 120\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.Tasks.Task.\u003c\u003ec.\u003c.cctor\u003eb__288_0(Object obj)\r\n   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()",
+                                                            "typeName":  "ArgumentException"
+                                                        },
+                                            "exceptionId":  "CLR/System.ArgumentException"
+                                        },
+                      "frames":  [
+                                     "Program.ThrowInTask() Program.cs:199",
+                                     "Program.\u003c\u003ec.\u003cMain\u003eb__5_1() Program.cs:120"
+                                 ]
+                  },
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "Exception thrown: \u0027System.AggregateException\u0027 in System.Private.CoreLib.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "always",
+                                            "description":  "Exception thrown: \u0027System.AggregateException\u0027 in System.Private.CoreLib.dll: \u0027One or more errors occurred.\u0027\n Inner exceptions found, see $exception in variables window for more details.\n Innermost exception: System.ArgumentException",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.AggregateException** \u0027One or more errors occurred.\u0027",
+                                                            "fullTypeName":  "System.AggregateException",
+                                                            "innerException":  [
+                                                                                   {
+                                                                                       "evaluateName":  "$exception",
+                                                                                       "formattedDescription":  "**System.ArgumentException** \u0027in task\u0027",
+                                                                                       "fullTypeName":  "System.ArgumentException",
+                                                                                       "message":  "in task",
+                                                                                       "source":  "SmokeConsole",
+                                                                                       "stackTrace":  "   at Program.ThrowInTask() in <repo>\\tests\\apps\\Console\\Program.cs:line 199\r\n   at Program.\u003c\u003ec.\u003cMain\u003eb__5_1() in <repo>\\tests\\apps\\Console\\Program.cs:line 120\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.Tasks.Task.\u003c\u003ec.\u003c.cctor\u003eb__288_0(Object obj)\r\n   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task\u0026 currentTaskSlot, Thread threadPoolThread)",
+                                                                                       "typeName":  "ArgumentException"
+                                                                                   }
+                                                                               ],
+                                                            "message":  "One or more errors occurred.",
+                                                            "source":  "System.Private.CoreLib",
+                                                            "stackTrace":  "   at System.Threading.Tasks.Task.ThrowIfExceptional(Boolean includeTaskCanceledExceptions)",
+                                                            "typeName":  "AggregateException"
+                                                        },
+                                            "exceptionId":  "CLR/System.AggregateException"
+                                        },
+                      "frames":  [
+                                     "System.Threading.Tasks.Task.ThrowIfExceptional() :0",
+                                     "System.Threading.Tasks.Task.Wait() :0",
+                                     "System.Threading.Tasks.Task.Wait() :0",
+                                     "Program.Main() Program.cs:123"
+                                 ]
+                  }
+              ]
+}

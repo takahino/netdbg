@@ -1,0 +1,34 @@
+// Edit and Continue のスモーク試験 (Test-Enc) の、ソース生成器。[Describe] を付けた型に、インスタンスのフィールドの名前を
+// 並べて返す `Fields()` を生成する。型にフィールドを足すと、生成されるメソッドの本体が変わる。
+using System.Linq;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+[Generator]
+public sealed class DescribeGenerator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        var types = context.SyntaxProvider.CreateSyntaxProvider(
+            (node, _) => node is ClassDeclarationSyntax c && c.AttributeLists.SelectMany(l => l.Attributes).Any(a => a.Name.ToString() == "Describe"),
+            (ctx, _) =>
+            {
+                var type = (INamedTypeSymbol)ctx.SemanticModel.GetDeclaredSymbol(ctx.Node)!;
+                var fields = type.GetMembers().OfType<IFieldSymbol>().Where(f => !f.IsStatic && !f.IsImplicitlyDeclared).Select(f => f.Name);
+                return (Name: type.Name, Fields: string.Join(",", fields));
+            });
+        context.RegisterSourceOutput(types, (output, type) =>
+        {
+            var source = new StringBuilder()
+                .AppendLine("partial class " + type.Name)
+                .AppendLine("{")
+                .AppendLine("    public static string Fields()")
+                .AppendLine("    {")
+                .AppendLine("        return \"" + type.Fields + "\";")
+                .AppendLine("    }")
+                .AppendLine("}");
+            output.AddSource(type.Name + ".Describe.g.cs", source.ToString());
+        });
+    }
+}

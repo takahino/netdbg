@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>成績書{{#プログラム名}} - {{プログラム名}}{{/プログラム名}}</title>
+<!--
+  netdbg の成績書の既定のテンプレート（D-083）。現場の書式に合わせて直して使う。
+  ｛｛名前｝｝ は値、｛｛#一覧｝｝…｛｛/一覧｝｝ は繰り返し、｛｛^名前｝｝…｛｛/名前｝｝ は値が無いときだけ（半角の波かっこで書く）。使える名前は names.txt（日本語の名前も、英語の名前の別名として使える）。
+  1 ファイルで完結させるため、script、外部の CSS・画像・URL、on… の属性は書けない。
+-->
+<style>
+body { font-family: 'Yu Gothic UI', 'Meiryo', sans-serif; margin: 16px 20px; color: #222; font-size: 13px; line-height: 1.4; }
+h1 { font-size: 19px; margin: 0 0 8px; }
+h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+h2 .when { font-weight: normal; color: #666; font-size: 12px; margin-left: auto; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #d4d4d4; padding: 2px 6px; text-align: left; vertical-align: top; }
+th { background: #f3f3f3; white-space: nowrap; font-weight: 600; }
+.cover td, .cover th, .index td, .index th { font-size: 12px; }
+.index { margin: 8px 0 14px; } .index td.num { text-align: right; }
+.result { font-weight: bold; padding: 0 7px; border-radius: 3px; font-size: 12px; }
+.ok { background: #d8f0dc; color: #1a6b2b; } .ng { background: #fadbd8; color: #a3261b; } .open { background: #eee; color: #666; }
+section.item { display: none; border: 1px solid #ccc; border-left: 5px solid #bbb; border-radius: 4px; padding: 8px 10px; margin: 10px 0; }
+section.item.passed { border-left-color: #4caf50; } section.item.failed { border-left-color: #e53935; }
+section.item:target, #all:target ~ section.item { display: block; }
+body:has(section.item:target) .home { display: none; }
+.pager { display: flex; gap: 14px; font-size: 12px; margin: 0 0 6px; } a { color: #0563c1; } .show-all { font-size: 12px; }
+.facts { color: #555; font-size: 12px; margin: 3px 0 6px; } .facts b { color: #222; font-weight: 600; }
+.note { margin: 4px 0 6px; padding: 3px 6px; background: #fffbe6; border: 1px solid #f0e2a0; font-size: 12px; white-space: pre-wrap; }
+.ops { width: 100%; margin: 4px 0; } .ops td { font-size: 12px; } .ops td.n, .ops td.t { white-space: nowrap; color: #666; }
+.ops td.t { font-family: Consolas, monospace; } .ops td.who { white-space: nowrap; }
+.ops td.n, .ops td.t, .ops td.who { width: 1%; }
+.ops td.shot { width: 1%; padding: 2px; }
+.zoom input { display: none; }
+.zoom img { display: block; max-width: 160px; max-height: 110px; border: 1px solid #bbb; cursor: zoom-in; }
+.zoom input:checked + img { position: fixed; inset: 0; margin: auto; max-width: 96vw; max-height: 96vh; z-index: 10; background: #fff; cursor: zoom-out; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55); }
+.ops tr.note td { background: #fafafa; color: #444; }
+.who-ai { color: #1565c0; } .who-hand { color: #6a1b9a; }
+.details { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 12px; margin: 6px 0 2px; }
+.details h3 { font-size: 12px; margin: 0; color: #444; } .details ul { margin: 0; padding-left: 18px; font-size: 12px; }
+pre { margin: 0; background: #f7f7f7; border: 1px solid #ddd; padding: 3px 5px; font-size: 11px; white-space: pre-wrap; }
+.pictures { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; } figure { margin: 0; } figcaption { font-size: 11px; color: #666; }
+.muted { color: #888; }
+@media print { .home, section.item { display: block !important; } .pager, .show-all { display: none; } section.item { break-inside: avoid-page; } }
+</style>
+</head>
+<body>
+<div class="home" id="top">
+<h1>成績書</h1>
+<table class="cover">
+{{#プログラム}}<tr><th>プログラム</th><td>{{プログラム}}　版 {{版}}{{^版}}（版の情報なし）{{/版}}　更新 {{更新日時}}</td></tr>
+{{/プログラム}}<tr><th>期間</th><td>{{開始}} 〜 {{終了}}</td></tr>
+<tr><th>結果</th><td>OK {{OK数}} / NG {{NG数}} / 全 {{項目数}}　（作成 {{作成}}）</td></tr>
+</table>
+<table class="index">
+<tr><th>番号</th><th>項目</th><th>結果</th><th>所要時間</th><th>操作</th><th>画面</th><th>変化</th><th>SQL</th><th>メッセージ</th><th>例外</th></tr>
+{{#項目}}<tr><td><a href="#{{アンカー}}">{{番号}}</a></td><td>{{項目名}}</td><td><span class="result {{結果クラス}}">{{結果}}</span></td><td class="num">{{所要時間}}</td><td class="num">{{操作数}}</td><td class="num">{{画面数}}</td><td class="num">{{変化数}}</td><td class="num">{{SQL数}}</td><td class="num">{{メッセージ数}}</td><td class="num">{{例外数}}</td></tr>
+{{/項目}}</table>
+<p class="show-all"><a href="#all">すべての項目を並べて見る</a>（番号を押すと、その項目だけを見せます。画像は押すと大きくなります）</p>
+</div>
+<div id="all"></div>
+{{#項目}}<section class="item {{状態クラス}}" id="{{アンカー}}">
+<nav class="pager"><a href="#top">← 一覧に戻る</a>{{#前}}<a href="#{{前}}">‹ 前の項目</a>{{/前}}{{#次}}<a href="#{{次}}">次の項目 ›</a>{{/次}}</nav>
+<h2><span>{{番号}}</span><span>{{項目名}}</span><span class="result {{結果クラス}}">{{結果}}</span><span class="when">{{開始}} 〜 {{終了時刻}}（{{所要時間}}）</span></h2>
+<p class="facts">{{#exe}}<span title="{{exe}}"><b>{{exe名}}</b> 版 {{exe版}}{{^exe版}}なし{{/exe版}} / 更新 {{exe更新日時}}</span>　·　{{/exe}}操作 <b>{{操作数}}</b>　·　画面 <b>{{画面数}}</b>　·　変化 <b>{{変化数}}</b>　·　SQL <b>{{SQL数}}</b>　·　メッセージ <b>{{メッセージ数}}</b>　·　例外 <b>{{例外数}}</b></p>
+{{#備考}}<p class="note">備考: {{備考}}</p>
+{{/備考}}{{#操作あり}}<table class="ops">
+<tr><th>#</th><th>時刻</th><th>誰</th><th>操作</th>{{#操作の画面あり}}<th>操作した箇所</th><th>操作のあと</th>{{/操作の画面あり}}</tr>
+{{#操作}}<tr class="{{行クラス}}"><td class="n">{{連番}}</td><td class="t">{{時刻}}</td><td class="who {{誰クラス}}">{{誰}}</td><td>{{内容}}</td>{{#操作の画面あり}}<td class="shot">{{箇所画像}}</td><td class="shot">{{あと画像}}</td>{{/操作の画面あり}}</tr>
+{{/操作}}</table>
+{{/操作あり}}{{^操作あり}}<p class="muted">（記録された操作はありません）</p>
+{{/操作あり}}{{#詳細あり}}<div class="details">{{#変化あり}}<div><h3>変わったコントロール</h3>{{^変化}}<p class="muted">{{変化の理由}}</p>{{/変化}}<ul>{{#変化}}<li>{{内容}}</li>{{/変化}}</ul></div>{{/変化あり}}{{#SQL全文}}<div><h3>SQL</h3><pre>{{SQL全文}}</pre></div>{{/SQL全文}}{{#メッセージ一覧}}<div><h3>メッセージ</h3><ul>{{#メッセージ}}<li>{{内容}}</li>{{/メッセージ}}</ul></div>{{/メッセージ一覧}}{{#例外一覧}}<div><h3>例外</h3><ul>{{#例外}}<li>{{内容}}</li>{{/例外}}</ul></div>{{/例外一覧}}{{#写せなかった画面}}<div><h3>写せなかった画面</h3><p class="muted">{{内容}}</p></div>{{/写せなかった画面}}</div>
+{{/詳細あり}}<div class="pictures">{{#画面}}<figure>{{画像}}<figcaption>{{説明}}</figcaption></figure>{{/画面}}</div>
+</section>
+{{/項目}}</body>
+</html>

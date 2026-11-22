@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 式の総当たり試験の対象。Generated.cs は tools/exprgen が target/sweep に作る (tests/apps/build.ps1 が先に実行する)。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <SelfContained>false</SelfContained>
+    <DebugType>portable</DebugType>
+    <AssemblyName>Sweep</AssemblyName>
+    <Nullable>disable</Nullable>
+    <!-- 機械的に作った式には、結果が決まっている比較などが大量にある。警告は見ない。 -->
+    <WarningLevel>0</WarningLevel>
+    <NoWarn>$(NoWarn);CS0162;CS0458;CS0464;CS0472;CS1718;CS0652;CS0675;CS8073;CS0183;CS0184;CS0219;CS0414;CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\target\sweep\Generated.cs" Link="Generated.cs" />
+  </ItemGroup>
+</Project>

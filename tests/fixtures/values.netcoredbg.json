@@ -1,0 +1,575 @@
+{
+    "stopped":  {
+                    "reason":  "breakpoint",
+                    "allThreadsStopped":  true
+                },
+    "threads":  [
+                    "Main Thread"
+                ],
+    "frames":  [
+                   {
+                       "name":  "Order.Total()",
+                       "line":  248,
+                       "column":  9,
+                       "endLine":  248,
+                       "endColumn":  25,
+                       "source":  "Program.cs"
+                   },
+                   {
+                       "name":  "Program.Main()",
+                       "line":  137,
+                       "column":  9,
+                       "endLine":  137,
+                       "endColumn":  58,
+                       "source":  "Program.cs"
+                   }
+               ],
+    "scopes":  [
+                   {
+                       "name":  "Locals",
+                       "expensive":  false
+                   }
+               ],
+    "locals":  [
+                   {
+                       "name":  "this",
+                       "value":  "{Order}",
+                       "type":  "Order",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "id",
+                                            "value":  "3",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Name",
+                                            "value":  "\"tea\"",
+                                            "type":  "string",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "prices",
+                       "value":  "{int[2]}",
+                       "type":  "int[]",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "[0]",
+                                            "value":  "10",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "[1]",
+                                            "value":  "20",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "rate",
+                       "value":  "1.5",
+                       "type":  "double",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "label",
+                       "value":  "\"a\\\"b\"",
+                       "type":  "string",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "ok",
+                       "value":  "true",
+                       "type":  "bool",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "letter",
+                       "value":  "120 \u0027x\u0027",
+                       "type":  "char",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "big",
+                       "value":  "1234567890123",
+                       "type":  "long",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "boxed",
+                       "value":  "{int}",
+                       "type":  "int",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "m_value",
+                                            "value":  "5",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "missing",
+                       "value":  "null",
+                       "type":  "string",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "names",
+                       "value":  "Count = 1",
+                       "type":  "System.Collections.Generic.List\u003cstring\u003e",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "_items",
+                                            "value":  "{string[4]}",
+                                            "type":  "string[]",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "_size",
+                                            "value":  "1",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "_version",
+                                            "value":  "1",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Capacity",
+                                            "value":  "4",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Count",
+                                            "value":  "1",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "System.Collections.IList.IsFixedSize",
+                                            "value":  "false",
+                                            "type":  "bool",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "System.Collections.Generic.ICollection\u003cT\u003e.IsReadOnly",
+                                            "value":  "false",
+                                            "type":  "bool",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "System.Collections.IList.IsReadOnly",
+                                            "value":  "false",
+                                            "type":  "bool",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "System.Collections.ICollection.IsSynchronized",
+                                            "value":  "false",
+                                            "type":  "bool",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "System.Collections.ICollection.SyncRoot",
+                                            "value":  "{System.Collections.Generic.List\u003cstring\u003e}",
+                                            "type":  "System.Collections.Generic.List\u003cstring\u003e",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "Item",
+                                            "value":  "{System.Reflection.TargetParameterCountException}",
+                                            "type":  "System.Reflection.TargetParameterCountException",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "System.Collections.IList.Item",
+                                            "value":  "{System.Reflection.TargetParameterCountException}",
+                                            "type":  "System.Reflection.TargetParameterCountException",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "grid",
+                       "value":  "{int[2, 3]}",
+                       "type":  "int[,]",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "[0, 0]",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "[0, 1]",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "[0, 2]",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "[1, 0]",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "[1, 1]",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "[1, 2]",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "shade",
+                       "value":  "Dark",
+                       "type":  "Shade",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "value__",
+                                            "value":  "1",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "keys",
+                       "value":  "Alt | Shift",
+                       "type":  "System.ConsoleModifiers",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "value__",
+                                            "value":  "3",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "price",
+                       "value":  "12.50",
+                       "type":  "decimal",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "maybe",
+                       "value":  "7",
+                       "type":  "int?",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "nothing",
+                       "value":  "null",
+                       "type":  "int?",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "point",
+                       "value":  "{Point}",
+                       "type":  "Point",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "X",
+                                            "value":  "1",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Y",
+                                            "value":  "2",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Area",
+                                            "value":  "2",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "moment",
+                       "value":  "{System.DateTime}",
+                       "type":  "System.DateTime",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "_dateData",
+                                            "value":  "638448087090000000",
+                                            "type":  "ulong",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "UTicks",
+                                            "value":  "638448087090000000",
+                                            "type":  "ulong",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "InternalKind",
+                                            "value":  "0",
+                                            "type":  "ulong",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Date",
+                                            "value":  "{System.DateTime}",
+                                            "type":  "System.DateTime",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "Day",
+                                            "value":  "29",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "DayOfWeek",
+                                            "value":  "Thursday",
+                                            "type":  "System.DayOfWeek",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "DayOfYear",
+                                            "value":  "60",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Hour",
+                                            "value":  "13",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Kind",
+                                            "value":  "Unspecified",
+                                            "type":  "System.DateTimeKind",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "Millisecond",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Microsecond",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Nanosecond",
+                                            "value":  "0",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Minute",
+                                            "value":  "5",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Month",
+                                            "value":  "2",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Second",
+                                            "value":  "9",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Ticks",
+                                            "value":  "638448087090000000",
+                                            "type":  "long",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "TimeOfDay",
+                                            "value":  "{System.TimeSpan}",
+                                            "type":  "System.TimeSpan",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "Year",
+                                            "value":  "2024",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Static members",
+                                            "value":  "",
+                                            "type":  "",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "ratio",
+                       "value":  "0.25",
+                       "type":  "float",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "small",
+                       "value":  "200",
+                       "type":  "byte",
+                       "expandable":  false
+                   },
+                   {
+                       "name":  "shown",
+                       "value":  "{Shown}",
+                       "type":  "Shown",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "Hidden",
+                                            "value":  "1",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Visible",
+                                            "value":  "2",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Items",
+                                            "value":  "{int[2]}",
+                                            "type":  "int[]",
+                                            "expandable":  true
+                                        },
+                                        {
+                                            "name":  "Note",
+                                            "value":  "\"n\"",
+                                            "type":  "string",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "VisibleProperty",
+                                            "value":  "6",
+                                            "type":  "int",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Auto",
+                                            "value":  "\"a\"",
+                                            "type":  "string",
+                                            "expandable":  false
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "bag",
+                       "value":  "{Bag}",
+                       "type":  "Bag",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "raw",
+                                            "value":  "{int[3]}",
+                                            "type":  "int[]",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "displayed",
+                       "value":  "{Displayed}",
+                       "type":  "Displayed",
+                       "expandable":  true,
+                       "children":  [
+                                        {
+                                            "name":  "Name",
+                                            "value":  "\"d\"",
+                                            "type":  "string",
+                                            "expandable":  false
+                                        },
+                                        {
+                                            "name":  "Items",
+                                            "value":  "{int[3]}",
+                                            "type":  "int[]",
+                                            "expandable":  true
+                                        }
+                                    ]
+                   },
+                   {
+                       "name":  "sum",
+                       "value":  "30",
+                       "type":  "int",
+                       "expandable":  false
+                   }
+               ]
+}

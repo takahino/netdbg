@@ -1,0 +1,16 @@
+// スモーク試験 Test-ChildProcess の親: 子を起動して、終わるのを待つ。
+using System;
+using System.Diagnostics;
+using System.IO;
+
+static class Program
+{
+    static int Main()
+    {
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SmokeChild.exe");
+        var child = Process.Start(new ProcessStartInfo(path, "7") { UseShellExecute = false });
+        child.WaitForExit();
+        Console.WriteLine("done " + child.ExitCode); // @done
+        return 0;
+    }
+}

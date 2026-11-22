@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Edit and Continue のスモーク試験 (Test-Enc) の、ソース生成器を使う対象。{TFM} と {ARCH} は試験が置き換える。
+       RuntimeIdentifier をコマンドラインで渡すと、生成器のプロジェクトにも伝わるので、ここに書く。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>{TFM}</TargetFramework>
+    <RuntimeIdentifier>win-{ARCH}</RuntimeIdentifier>
+    <PlatformTarget>{ARCH}</PlatformTarget>
+    <SelfContained>false</SelfContained>
+    <DebugType>portable</DebugType>
+    <AssemblyName>SmokeEnc</AssemblyName>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\generator\SmokeEncGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

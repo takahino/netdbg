@@ -1,0 +1,11 @@
+{
+  "name": "netdbg-bench",
+  "displayName": "netdbg benchmark host",
+  "description": "Runs the speed comparison inside VS Code (see run.js). Not published.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  }
+}

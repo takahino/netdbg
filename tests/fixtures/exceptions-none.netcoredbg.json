@@ -1,0 +1,60 @@
+{
+    "mode":  "throw",
+    "filters":  [
+
+                ],
+    "exceptionBreakpointFilters":  [
+                                       {
+                                           "filter":  "all",
+                                           "label":  "all"
+                                       },
+                                       {
+                                           "filter":  "user-unhandled",
+                                           "label":  "user-unhandled"
+                                       }
+                                   ],
+    "capabilities":  {
+                         "supportsCancelRequest":  true,
+                         "supportsConditionalBreakpoints":  true,
+                         "supportsConfigurationDoneRequest":  true,
+                         "supportsEvaluateForHovers":  true,
+                         "supportsExceptionFilterOptions":  true,
+                         "supportsExceptionInfoRequest":  true,
+                         "supportsExceptionOptions":  false,
+                         "supportsFunctionBreakpoints":  true,
+                         "supportsGotoTargetsRequest":  true,
+                         "supportsSetExpression":  true,
+                         "supportsSetVariable":  true,
+                         "supportsTerminateRequest":  true,
+                         "supportTerminateDebuggee":  true
+                     },
+    "setExceptionBreakpoints":  {
+
+                                },
+    "stops":  [
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "An unhandled exception of type \u0027System.InvalidOperationException\u0027 occurred in SmokeConsole.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "unhandled",
+                                            "description":  "An unhandled exception of type \u0027System.InvalidOperationException\u0027 occurred in SmokeConsole.dll: \u0027boom\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.InvalidOperationException** \u0027boom\u0027",
+                                                            "fullTypeName":  "System.InvalidOperationException",
+                                                            "message":  "boom",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.Main(String[] args) in <repo>\\tests\\apps\\Console\\Program.cs:line 95",
+                                                            "typeName":  "InvalidOperationException"
+                                                        },
+                                            "exceptionId":  "CLR/System.InvalidOperationException"
+                                        },
+                      "frames":  [
+                                     "Program.Main() Program.cs:95"
+                                 ]
+                  }
+              ]
+}

@@ -1,0 +1,8 @@
+[package]
+name = "idlgen"
+version = "0.1.0"
+edition = "2021"
+description = "Generates src/cordebug.rs from idl/cordebug.idl"
+publish = false
+
+[dependencies]

@@ -1,0 +1,31 @@
+// エンジンの中の逆コンパイル（D-060）のスモーク試験 (Test-Decompile) の対象。試験が一時フォルダーに写し、PDB 無しの
+// Release でビルドする。
+using System;
+
+static class Program
+{
+    static int Compute(int x)
+    {
+        int y = x * 2;
+        return y + 1;
+    }
+
+    // 捕まえた変数を持つラムダ (表示用のクラス)。逆コンパイルでラムダに戻り、捕まえた変数を名前で読める。
+    static int Captured(int limit)
+    {
+        int seen = 0;
+        Array.ForEach(new[] { 5, 1, 8 }, v => { if (v > limit) seen++; });
+        return seen;
+    }
+
+    static void Main()
+    {
+        int total = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            total += Compute(10 + i);
+        }
+        Console.WriteLine("total " + total);
+        Console.WriteLine("seen " + Captured(4));
+    }
+}

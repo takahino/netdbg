@@ -1,0 +1,11 @@
+# 売りは x86。何も指定しないビルドと試験は 32bit で行う。
+# x64 は `--target x86_64-pc-windows-msvc` を付ける(build.ps1 が両方を作る)。
+[build]
+target = "i686-pc-windows-msvc"
+
+# VC ランタイムの DLL を要求しない単体 exe にする。
+[target.i686-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

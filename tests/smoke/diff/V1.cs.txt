@@ -1,0 +1,47 @@
+// 差し替わった exe の差分 (Test-Diff) の対象の、前の版。V2.cs.txt との違いは、Adjust の中身と、足した Label だけ。
+using System;
+using System.Linq;
+
+static class Program
+{
+    static int Compute(int x)
+    {
+        int y = x * 2;
+        return y + 1;
+    }
+
+    static int Adjust(int x)
+    {
+        return x - 1;
+    }
+
+    static int Sum(int[] values)
+    {
+        return values.Where(v => v > 0).Sum();
+    }
+
+    // 型引数だけが違う多重定義 (変えていないので、差分に出てはいけない)。
+    static T Make<T>(string text)
+    {
+        return default(T);
+    }
+
+    static string Make(string text)
+    {
+        return text + "!";
+    }
+
+    static void Main(string[] args)
+    {
+        int total = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            total += Compute(10 + i);
+        }
+        if (args.Length > 0)
+        {
+            total = Adjust(total);
+        }
+        Console.WriteLine("total " + total + " " + Sum(new[] { 1, -2, 3 }));
+    }
+}

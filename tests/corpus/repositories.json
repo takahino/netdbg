@@ -1,0 +1,198 @@
+{
+    "famous":  {
+                   "note":  "有名なプロジェクト(2026-11-17 に選んだ 8 個)",
+                   "repositories":  [
+                                        {
+                                            "repo":  "JamesNK/Newtonsoft.Json",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "DapperLib/Dapper",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "serilog/serilog",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "App-vNext/Polly",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "AutoMapper/AutoMapper",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "FluentValidation/FluentValidation",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "Humanizr/Humanizer",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "NLog/NLog",
+                                            "branch":  "HEAD"
+                                        }
+                                    ]
+               },
+    "old":  {
+                "note":  "古い C#(C# 2〜4 の頃)。GitHub の検索: language:C# created:2008-01-01..2011-12-31 pushed:\u003c2013-01-01 stars:2..40 size:100..30000、更新の新しい順",
+                "repositories":  [
+                                     {
+                                         "repo":  "jesse99/Continuum",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "dbrgn/Clipboard2Image",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "tyranid/Sourcey-Jack",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "rickardn/Sandbox",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "cadenza/cadenza",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "krabicezpapundeklu/Formatting",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "strider-/NntpClient",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "cureos/dictionarylinq",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "artm/ExplodedViews",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "JonKruger/HttpInterfaces",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "johanburati/stuff",
+                                         "branch":  "master"
+                                     },
+                                     {
+                                         "repo":  "sbaer/selcommands",
+                                         "branch":  "master"
+                                     }
+                                 ]
+            },
+    "middle":  {
+                   "note":  "少し古い(C# 5〜6、.NET Framework 時代)。language:C# created:2013-01-01..2016-12-31 pushed:\u003c2018-01-01 stars:2..30 size:100..30000",
+                   "repositories":  [
+                                        {
+                                            "repo":  "ysjiang4869/timedShutdownHelper",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "dialex/PersonalTroller",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "damienbod/WebApiParameters",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "cuproPanda/Additional-Joy-Objects",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "HauntedBees/Blockara",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "solah1701/ProceduralPlanets",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "JanWichelmann/AoETechTreeTool",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "Netdex/TouhouCV",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "RamiAhmed/ApexTeaching",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "kmorcinek/tanks",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "nodoid/AnimatedGif",
+                                            "branch":  "master"
+                                        },
+                                        {
+                                            "repo":  "syedgakbar/quick-chess",
+                                            "branch":  "master"
+                                        }
+                                    ]
+               },
+    "minor":  {
+                  "note":  "新しいが、メンテナーの少ないマイナーなもの。language:C# created:2020-01-01..2024-12-31 stars:1..10 size:100..20000",
+                  "repositories":  [
+                                       {
+                                           "repo":  "l1em1on1/social-tennis",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "sponsorkit/sponsorkit.io",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "Sichii/ALClientCS",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "Vapok/ShieldMeBruh",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "Testably/aweXpect.Testably",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "Vapok/ConsoleBuddy",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "usausa/template-wpf",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "sir-gon/algorithm-exercises-csharp",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "mwangi-samuel/UserIdentity",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "guibranco/dotnet-aicommitmessage",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "ktsu-dev/BuildMonitor",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "nefarius/AppVeyorArtifactsReceiver",
+                                           "branch":  "master"
+                                       }
+                                   ]
+              }
+}

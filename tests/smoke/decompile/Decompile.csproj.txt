@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- エンジンの中の逆コンパイルのスモーク試験 (Test-Decompile) の対象。{TFM} は試験が置き換える。PDB を作らない Release。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>{TFM}</TargetFramework>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+    <AssemblyName>SmokeDecompile</AssemblyName>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,70 @@
+{
+    "mode":  "inner",
+    "filters":  [
+                    "user-unhandled"
+                ],
+    "exceptionBreakpointFilters":  [
+                                       {
+                                           "filter":  "all",
+                                           "label":  "all"
+                                       },
+                                       {
+                                           "filter":  "user-unhandled",
+                                           "label":  "user-unhandled"
+                                       }
+                                   ],
+    "capabilities":  {
+                         "supportsCancelRequest":  true,
+                         "supportsConditionalBreakpoints":  true,
+                         "supportsConfigurationDoneRequest":  true,
+                         "supportsEvaluateForHovers":  true,
+                         "supportsExceptionFilterOptions":  true,
+                         "supportsExceptionInfoRequest":  true,
+                         "supportsExceptionOptions":  false,
+                         "supportsFunctionBreakpoints":  true,
+                         "supportsGotoTargetsRequest":  true,
+                         "supportsSetExpression":  true,
+                         "supportsSetVariable":  true,
+                         "supportsTerminateRequest":  true,
+                         "supportTerminateDebuggee":  true
+                     },
+    "setExceptionBreakpoints":  {
+
+                                },
+    "stops":  [
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "An exception of type \u0027System.ArgumentException\u0027 occurred in SmokeConsole.dll but was not handled in user code"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "userUnhandled",
+                                            "description":  "An exception of type \u0027System.ArgumentException\u0027 occurred in SmokeConsole.dll but was not handled in user code: \u0027in task\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.ArgumentException** \u0027in task\u0027",
+                                                            "fullTypeName":  "System.ArgumentException",
+                                                            "message":  "in task",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.ThrowInTask() in <repo>\\tests\\apps\\Console\\Program.cs:line 199\r\n   at Program.\u003c\u003ec.\u003cMain\u003eb__5_1() in <repo>\\tests\\apps\\Console\\Program.cs:line 120\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.Tasks.Task.\u003c\u003ec.\u003c.cctor\u003eb__288_0(Object obj)\r\n   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)",
+                                                            "typeName":  "ArgumentException"
+                                                        },
+                                            "exceptionId":  "CLR/System.ArgumentException"
+                                        },
+                      "frames":  [
+                                     "Program.ThrowInTask() Program.cs:199",
+                                     "Program.\u003c\u003ec.\u003cMain\u003eb__5_1() Program.cs:120",
+                                     "System.Threading.Tasks.Task\u003cint\u003e.InnerInvoke() :0",
+                                     "System.Threading.Tasks.Task.\u003c\u003ec.\u003c.cctor\u003eb__288_0() :0",
+                                     "System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop() :0",
+                                     "System.Threading.Tasks.Task.ExecuteWithThreadLocal() :0",
+                                     "System.Threading.Tasks.Task.ExecuteEntryUnsafe() :0",
+                                     "System.Threading.Tasks.Task.ExecuteFromThreadPool() :0",
+                                     "System.Threading.ThreadPoolWorkQueue.Dispatch() :0",
+                                     "System.Threading.PortableThreadPool.WorkerThread.WorkerThreadStart() :0",
+                                     "System.Threading.Thread.StartCallback() :0"
+                                 ]
+                  }
+              ]
+}

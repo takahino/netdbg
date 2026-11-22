@@ -1,0 +1,55 @@
+// 段階 12 のスモーク (Test-Dump): 例外のフィルターの中で待ち続ける (例外を投げている途中のまま)。試験がこの状態を
+// ダンプに書き出し、エンジンでダンプを開いて、スタック、ローカル変数、例外、ヒープを読む。
+using System;
+using System.Collections.Generic;
+using System.Threading;
+
+class Order
+{
+    public int Id;
+    public string Customer;
+    public decimal Amount;
+}
+
+static class Program
+{
+    static readonly List<Order> Orders = new List<Order>();
+
+    static void Main(string[] args)
+    {
+        for (int i = 1; i <= 3; i++)
+        {
+            Orders.Add(new Order { Id = i, Customer = "C" + i, Amount = i * 15.5m });
+        }
+        Process(Orders[1], "batch-7");
+    }
+
+    static void Process(Order order, string batch)
+    {
+        int retries = 3;
+        try
+        {
+            Validate(order);
+        }
+        catch (Exception e) when (Hang(e, retries)) // @filter
+        {
+        }
+    }
+
+    static void Validate(Order order)
+    {
+        decimal limit = 20m;
+        if (order.Amount > limit)
+        {
+            throw new InvalidOperationException("Amount " + order.Amount + " exceeds " + limit); // @throw
+        }
+    }
+
+    static bool Hang(Exception e, int retries)
+    {
+        Console.WriteLine("waiting");
+        Console.Out.Flush();
+        Thread.Sleep(Timeout.Infinite); // @hang
+        return false;
+    }
+}

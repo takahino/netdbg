@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>netdbg</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+</head>
+<body>
+<!-- WebAssembly を読み込むだけのつなぎ (wasm-bindgen が作る ui.js の init を呼ぶ。Trunk が生成するものと同じ形)。画面の処理はすべて Rust。 -->
+<script type="module">import init from "/ui.js"; init({ module_or_path: "/ui_bg.wasm" });</script>
+</body>
+</html>

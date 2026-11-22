@@ -1,0 +1,1 @@
+# C# のコンパイラは拒むのに、エンジンが評価してしまう式 (tests/conformance/sweep.ps1 -Rejected -UpdatePending が作る)。拒むようになったら消す。

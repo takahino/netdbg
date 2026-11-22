@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 埋め込み PDB（DebugType embedded）の対象。隣に .pdb を置かず、アセンブリの中の PDB だけで止まれることを確かめる。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <SelfContained>false</SelfContained>
+    <DebugType>embedded</DebugType>
+    <AssemblyName>SmokeConsoleEmbedded</AssemblyName>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- 適合試験のポインターの式 (Conformance.Run の終わりの unsafe ブロック)。 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Console\Program.cs" />
+  </ItemGroup>
+</Project>

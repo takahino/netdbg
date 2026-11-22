@@ -1,0 +1,54 @@
+{
+    "fsharp-famous": {
+        "note": "有名な F# のプロジェクト。GitHub の検索: language:F# stars:>800 size:100..60000 (2026-11-18)",
+        "extension": ".fs",
+        "repositories": [
+            { "repo": "giraffe-fsharp/Giraffe", "branch": "HEAD" },
+            { "repo": "SuaveIO/suave", "branch": "HEAD" },
+            { "repo": "fsprojects/Avalonia.FuncUI", "branch": "HEAD" },
+            { "repo": "fscheck/FsCheck", "branch": "HEAD" },
+            { "repo": "fsbolero/Bolero", "branch": "HEAD" },
+            { "repo": "fsprojects/FSharpPlus", "branch": "HEAD" },
+            { "repo": "elmish/elmish", "branch": "HEAD" },
+            { "repo": "artempyanykh/marksman", "branch": "HEAD" }
+        ]
+    },
+    "fsharp-minor": {
+        "note": "メンテナーの少ない F#。language:F# created:2020-01-01..2024-12-31 stars:1..10 size:100..20000 (2026-11-18)",
+        "extension": ".fs",
+        "repositories": [
+            { "repo": "WoofWare/WoofWare.PrattParser", "branch": "HEAD" },
+            { "repo": "goswinr/Str", "branch": "HEAD" },
+            { "repo": "goswinr/ResizeArrayT", "branch": "HEAD" },
+            { "repo": "goswinr/Euclid.Rhino", "branch": "HEAD" },
+            { "repo": "meiermade/FSharp.ViewEngine", "branch": "HEAD" },
+            { "repo": "csrakowski/AreThere", "branch": "HEAD" },
+            { "repo": "Smaug123/gitea-repo-config", "branch": "HEAD" }
+        ]
+    },
+    "vb-famous": {
+        "note": "有名な VB.NET のプロジェクト。language:\"Visual Basic .NET\" stars:>150 size:100..60000 (2026-11-18)",
+        "extension": ".vb",
+        "repositories": [
+            { "repo": "IridiumIO/CompactGUI", "branch": "HEAD" },
+            { "repo": "ChrisAnd1998/TaskbarX", "branch": "HEAD" },
+            { "repo": "staxrip/staxrip", "branch": "HEAD" },
+            { "repo": "AAndyProgram/SCrawler", "branch": "HEAD" },
+            { "repo": "Fleex255/PolicyPlus", "branch": "HEAD" },
+            { "repo": "basildane/WakeOnLAN", "branch": "HEAD" },
+            { "repo": "ZeqMacaw/Crowbar", "branch": "HEAD" }
+        ]
+    },
+    "vb-minor": {
+        "note": "メンテナーの少ない VB.NET。language:\"Visual Basic .NET\" created:2015-01-01..2024-12-31 stars:1..10 size:100..20000 (2026-11-18)",
+        "extension": ".vb",
+        "repositories": [
+            { "repo": "svtica/LiteTask", "branch": "HEAD" },
+            { "repo": "albusmw/AstroSoftware", "branch": "HEAD" },
+            { "repo": "Walkman100/FileBrowser", "branch": "HEAD" },
+            { "repo": "trparky/Free-SysLog", "branch": "HEAD" },
+            { "repo": "CompuMasterGmbH/CompuMaster.Calendar", "branch": "HEAD" },
+            { "repo": "CompuMasterGmbH/CompuMaster.Text.Diff", "branch": "HEAD" }
+        ]
+    }
+}

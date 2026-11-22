@@ -1,0 +1,46 @@
+{
+    "mode":  "break",
+    "filters":  [
+
+                ],
+    "exceptionBreakpointFilters":  [
+                                       {
+                                           "filter":  "all",
+                                           "label":  "all"
+                                       },
+                                       {
+                                           "filter":  "user-unhandled",
+                                           "label":  "user-unhandled"
+                                       }
+                                   ],
+    "capabilities":  {
+                         "supportsCancelRequest":  true,
+                         "supportsConditionalBreakpoints":  true,
+                         "supportsConfigurationDoneRequest":  true,
+                         "supportsEvaluateForHovers":  true,
+                         "supportsExceptionFilterOptions":  true,
+                         "supportsExceptionInfoRequest":  true,
+                         "supportsExceptionOptions":  false,
+                         "supportsFunctionBreakpoints":  true,
+                         "supportsGotoTargetsRequest":  true,
+                         "supportsSetExpression":  true,
+                         "supportsSetVariable":  true,
+                         "supportsTerminateRequest":  true,
+                         "supportTerminateDebuggee":  true
+                     },
+    "setExceptionBreakpoints":  {
+
+                                },
+    "stops":  [
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "pause"
+                                  },
+                      "exceptionInfo":  "失敗: Failed command \u0027exceptionInfo\u0027 : 0x80004005",
+                      "frames":  [
+                                     "Program.Main() Program.cs:107"
+                                 ]
+                  }
+              ]
+}

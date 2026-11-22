@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- .NET Framework 版の WPF の GUI の試験の対象。ソースは Wpf と同じものを使う（目印の行も共通）。 -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <DebugType>portable</DebugType>
+    <AssemblyName>SmokeWpf48</AssemblyName>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Wpf\Program.cs" />
+  </ItemGroup>
+</Project>

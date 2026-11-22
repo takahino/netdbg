@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test Report{{#programName}} - {{programName}}{{/programName}}</title>
+<!--
+  The default report template of netdbg (D-083). Edit it to match your site's layout.
+  ｛｛name｝｝ is a value, ｛｛#list｝｝…｛｛/list｝｝ repeats, ｛｛^name｝｝…｛｛/name｝｝ is only when there is no value (write them with ASCII braces). The usable names are in names.txt.
+  So that the report stays one self-contained file, scripts, outside CSS, pictures and URLs, and on… attributes cannot be written.
+-->
+<style>
+body { font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif; margin: 16px 20px; color: #222; font-size: 13px; line-height: 1.4; }
+h1 { font-size: 19px; margin: 0 0 8px; }
+h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+h2 .when { font-weight: normal; color: #666; font-size: 12px; margin-left: auto; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #d4d4d4; padding: 2px 6px; text-align: left; vertical-align: top; }
+th { background: #f3f3f3; white-space: nowrap; font-weight: 600; }
+.cover td, .cover th, .index td, .index th { font-size: 12px; }
+.index { margin: 8px 0 14px; } .index td.num { text-align: right; }
+.result { font-weight: bold; padding: 0 7px; border-radius: 3px; font-size: 12px; }
+.ok { background: #d8f0dc; color: #1a6b2b; } .ng { background: #fadbd8; color: #a3261b; } .open { background: #eee; color: #666; }
+section.item { display: none; border: 1px solid #ccc; border-left: 5px solid #bbb; border-radius: 4px; padding: 8px 10px; margin: 10px 0; }
+section.item.passed { border-left-color: #4caf50; } section.item.failed { border-left-color: #e53935; }
+section.item:target, #all:target ~ section.item { display: block; }
+body:has(section.item:target) .home { display: none; }
+.pager { display: flex; gap: 14px; font-size: 12px; margin: 0 0 6px; } a { color: #0563c1; } .show-all { font-size: 12px; }
+.facts { color: #555; font-size: 12px; margin: 3px 0 6px; } .facts b { color: #222; font-weight: 600; }
+.note { margin: 4px 0 6px; padding: 3px 6px; background: #fffbe6; border: 1px solid #f0e2a0; font-size: 12px; white-space: pre-wrap; }
+.ops { width: 100%; margin: 4px 0; } .ops td { font-size: 12px; } .ops td.n, .ops td.t { white-space: nowrap; color: #666; }
+.ops td.t { font-family: Consolas, monospace; } .ops td.who { white-space: nowrap; }
+.ops td.n, .ops td.t, .ops td.who { width: 1%; }
+.ops td.shot { width: 1%; padding: 2px; }
+.zoom input { display: none; }
+.zoom img { display: block; max-width: 160px; max-height: 110px; border: 1px solid #bbb; cursor: zoom-in; }
+.zoom input:checked + img { position: fixed; inset: 0; margin: auto; max-width: 96vw; max-height: 96vh; z-index: 10; background: #fff; cursor: zoom-out; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55); }
+.ops tr.note td { background: #fafafa; color: #444; }
+.who-ai { color: #1565c0; } .who-hand { color: #6a1b9a; }
+.details { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 12px; margin: 6px 0 2px; }
+.details h3 { font-size: 12px; margin: 0; color: #444; } .details ul { margin: 0; padding-left: 18px; font-size: 12px; }
+pre { margin: 0; background: #f7f7f7; border: 1px solid #ddd; padding: 3px 5px; font-size: 11px; white-space: pre-wrap; }
+.pictures { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; } figure { margin: 0; } figcaption { font-size: 11px; color: #666; }
+.muted { color: #888; }
+@media print { .home, section.item { display: block !important; } .pager, .show-all { display: none; } section.item { break-inside: avoid-page; } }
+</style>
+</head>
+<body>
+<div class="home" id="top">
+<h1>Test Report</h1>
+<table class="cover">
+{{#program}}<tr><th>Program</th><td>{{program}}　version {{version}}{{^version}}(no version information){{/version}}　modified {{modified}}</td></tr>
+{{/program}}<tr><th>Period</th><td>{{started}} – {{ended}}</td></tr>
+<tr><th>Results</th><td>OK {{okCount}} / NG {{ngCount}} / all {{itemCount}}　(written {{generated}})</td></tr>
+</table>
+<table class="index">
+<tr><th>No.</th><th>Item</th><th>Result</th><th>Duration</th><th>Actions</th><th>Pictures</th><th>Changes</th><th>SQL</th><th>Messages</th><th>Exceptions</th></tr>
+{{#items}}<tr><td><a href="#{{anchor}}">{{id}}</a></td><td>{{title}}</td><td><span class="result {{resultClass}}">{{result}}</span></td><td class="num">{{duration}}</td><td class="num">{{operationCount}}</td><td class="num">{{pictureCount}}</td><td class="num">{{changeCount}}</td><td class="num">{{sqlCount}}</td><td class="num">{{messageCount}}</td><td class="num">{{exceptionCount}}</td></tr>
+{{/items}}</table>
+<p class="show-all"><a href="#all">Show all items together</a> (click a number to see only that item; click a picture to enlarge it)</p>
+</div>
+<div id="all"></div>
+{{#items}}<section class="item {{stateClass}}" id="{{anchor}}">
+<nav class="pager"><a href="#top">← Back to the list</a>{{#previous}}<a href="#{{previous}}">‹ Previous item</a>{{/previous}}{{#next}}<a href="#{{next}}">Next item ›</a>{{/next}}</nav>
+<h2><span>{{id}}</span><span>{{title}}</span><span class="result {{resultClass}}">{{result}}</span><span class="when">{{started}} – {{endedTime}} ({{duration}})</span></h2>
+<p class="facts">{{#exe}}<span title="{{exe}}"><b>{{exeName}}</b> version {{exeVersion}}{{^exeVersion}}none{{/exeVersion}} / modified {{exeModified}}</span>　·　{{/exe}}actions <b>{{operationCount}}</b>　·　pictures <b>{{pictureCount}}</b>　·　changes <b>{{changeCount}}</b>　·　SQL <b>{{sqlCount}}</b>　·　messages <b>{{messageCount}}</b>　·　exceptions <b>{{exceptionCount}}</b></p>
+{{#note}}<p class="note">Note: {{note}}</p>
+{{/note}}{{#hasOperations}}<table class="ops">
+<tr><th>#</th><th>Time</th><th>Who</th><th>Action</th>{{#hasOperationPictures}}<th>Operated spot</th><th>After the action</th>{{/hasOperationPictures}}</tr>
+{{#operations}}<tr class="{{rowClass}}"><td class="n">{{index}}</td><td class="t">{{time}}</td><td class="who {{actorClass}}">{{actor}}</td><td>{{text}}</td>{{#hasOperationPictures}}<td class="shot">{{spotPicture}}</td><td class="shot">{{afterPicture}}</td>{{/hasOperationPictures}}</tr>
+{{/operations}}</table>
+{{/hasOperations}}{{^hasOperations}}<p class="muted">(no actions were recorded)</p>
+{{/hasOperations}}{{#hasDetails}}<div class="details">{{#hasChanges}}<div><h3>Changed controls</h3>{{^changes}}<p class="muted">{{changeReason}}</p>{{/changes}}<ul>{{#changes}}<li>{{text}}</li>{{/changes}}</ul></div>{{/hasChanges}}{{#sqlText}}<div><h3>SQL</h3><pre>{{sqlText}}</pre></div>{{/sqlText}}{{#messageText}}<div><h3>Messages</h3><ul>{{#messages}}<li>{{text}}</li>{{/messages}}</ul></div>{{/messageText}}{{#exceptionText}}<div><h3>Exceptions</h3><ul>{{#exceptions}}<li>{{text}}</li>{{/exceptions}}</ul></div>{{/exceptionText}}{{#missedPictures}}<div><h3>Pictures not taken</h3><p class="muted">{{text}}</p></div>{{/missedPictures}}</div>
+{{/hasDetails}}<div class="pictures">{{#pictures}}<figure>{{picture}}<figcaption>{{caption}}</figcaption></figure>{{/pictures}}</div>
+</section>
+{{/items}}</body>
+</html>

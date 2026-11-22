@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust targets (x86 が主、x64 も)
+        run: rustup target add i686-pc-windows-msvc x86_64-pc-windows-msvc wasm32-unknown-unknown
+
+      # 専用の画面 (ui/) を wasm にするつなぎの道具。版は ui/Cargo.lock の wasm-bindgen と同じ。
+      - name: wasm-bindgen
+        run: cargo install wasm-bindgen-cli --version 0.2.130 --locked
+
+      - name: Unit tests (x86)
+        run: cargo test
+
+      - name: Unit tests (x64)
+        run: cargo test --target x86_64-pc-windows-msvc
+
+      # 専用の画面の、ブラウザ無しで動く部分 (ui/src/model)。
+      - name: UI unit tests
+        run: cargo test --manifest-path ui/Cargo.toml --target x86_64-pc-windows-msvc --target-dir target/ui-test
+
+      - name: Generated bindings are up to date
+        shell: pwsh
+        run: |
+          cargo run -q -p idlgen -- idl/cordebug.idl src/cordebug.rs
+          cargo run -q -p idlgen -- idl/metahost.idl src/metahost.rs
+          git diff --exit-code -- src/cordebug.rs src/metahost.rs
+
+      - name: Build both
+        shell: pwsh
+        run: ./build.ps1
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # スモーク試験の対象は x86 でも動かすので、x86 の .NET ランタイムを足す。setup-dotnet が DOTNET_ROOT を x64 の
+      # 場所に向けるので、x86 の apphost が先に見る DOTNET_ROOT_X86 を x86 の場所にする (無いと x86 の対象が x64 の
+      # hostfxr.dll を読もうとして 0x800700C1 で起動しない)。
+      - name: x86 .NET runtime
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
+          ./dotnet-install.ps1 -Channel 10.0 -Runtime dotnet -Architecture x86 -InstallDir "${env:ProgramFiles(x86)}\dotnet" -NoPath
+          "DOTNET_ROOT_X86=${env:ProgramFiles(x86)}\dotnet" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # .NET 11 の対象 (Console11) は、target\dotnet11\sdk の SDK でビルドする (システムには入れない。docs/STATUS.md「.NET 11」)。
+      # 無いと tests/apps/build.ps1 が飛ばし、スモークも .NET 11 の分を試さない。
+      - name: .NET 11 SDK
+        shell: pwsh
+        run: |
+          $zip = 'target\dotnet11\sdk.zip'
+          New-Item -ItemType Directory -Force target\dotnet11 | Out-Null
+          Invoke-WebRequest https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100/dotnet-sdk-11.0.100-win-x64.zip -OutFile $zip
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          if ($hash -ne 'AE800F1FA1A6428E0D7C740BB745D9414F15334118C51E246DAB9850B738FADD') { throw ".NET 11 SDK のハッシュが違います: $hash" }
+          Expand-Archive $zip target\dotnet11\sdk
+          Remove-Item $zip
+
+      - name: Test apps
+        shell: pwsh
+        run: ./tests/apps/build.ps1
+
+      # 判定は x86。x64 の失敗は表示されるが終了コードには反映しない（docs/plan.html の段階 7 で揃える）。
+      - name: Smoke tests
+        shell: powershell
+        run: ./tests/smoke/run.ps1
+
+      # 落ちたときに原因を追えるように、エンジンのログ (%TEMP%\netdbg-smoke-*.log) を残す。
+      - name: Collect smoke logs
+        if: failure()
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'smoke-logs'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Get-ChildItem $env:TEMP -Filter 'netdbg-smoke-*.log' | Copy-Item -Destination $dir
+
+      - name: Upload smoke logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-logs
+          path: ${{ runner.temp }}/smoke-logs
+          retention-days: 7

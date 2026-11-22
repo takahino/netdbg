@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Edit and Continue の差分を作る補助 (製品に入る。docs/DECISIONS.md D-059)。エンジンが、デバッグ中に別のプロセスとして
+    起動し、標準入出力で 1 行 1 JSON をやり取りする。
+
+    Roslyn は同梱しない。ビルドのときは NuGet の決まった版 (SDK 9.0.200 の Roslyn と同じ 4.13) に対してコンパイルだけし
+    (ExcludeAssets=runtime で出力に写さない)、動くときは、エンジンが渡す利用者の SDK の Roslyn\bincore から読み込む
+    (Program.cs の AssemblyLoadContext の解決)。組み立てる機械の SDK の Roslyn を参照すると、その版で結果が変わる
+    (SDK 11 の Roslyn は .NET 10 を要り、net9.0 では組み立てられない)。4.13 に対してコンパイルするので、使う API は
+    SDK 9.0.200 以降のどの Roslyn にもある (4.12 = SDK 9.0.1xx には、生成器の GeneratorDriverOptions の baseDirectory が無い)。
+    RollForward=LatestMajor: いちばん新しいランタイムで動かす (新しい SDK の Roslyn は、新しい System.Collections.Immutable を要る)。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>LatestMajor</RollForward>
+    <AssemblyName>EncDelta</AssemblyName>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

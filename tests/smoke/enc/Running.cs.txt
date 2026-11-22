@@ -1,0 +1,25 @@
+// Edit and Continue のスモーク試験 (Test-Enc) の、走っている間に当てる場面の対象。止めずに当て、Value の戻り値
+// (次の呼び出しから) と、Main の出力の文字 (走っている Main の乗り換え) が変わるのを見る。
+using System;
+using System.Threading;
+
+static class Program
+{
+    static int Value()
+    {
+        return 1; // @value
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("start");
+        for (int i = 0; i < 300; i++)
+        {
+            int v = Value();
+            Console.WriteLine("tick " + i + " " + v); // @tick
+            if (v == 2) break;
+            Thread.Sleep(100);
+        }
+        Console.WriteLine("end");
+    }
+}

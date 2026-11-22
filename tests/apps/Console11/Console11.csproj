@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- .NET 11 版のスモーク試験の対象。ソースは Console と同じ。最新のランタイムと、最新の C# の書き方を確かめる。
+       ビルドには .NET 11 の SDK が要る（tests/apps/build.ps1 が target/dotnet11/sdk にあるものを使う）。
+       機械に .NET 11 のランタイムが入っていなくても動くように、ランタイムを同梱する（自己完結）。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <DebugType>portable</DebugType>
+    <AssemblyName>SmokeConsole11</AssemblyName>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- 適合試験のポインターの式 (Conformance.Run の終わりの unsafe ブロック)。 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Console\Program.cs" />
+  </ItemGroup>
+</Project>

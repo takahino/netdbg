@@ -1,0 +1,100 @@
+// スモーク試験 Test-Transactions の対象: データベースにつながない偽のプロバイダーで、トランザクションを始めて終える。
+using System;
+using System.Data;
+using System.Data.Common;
+#if NETFRAMEWORK
+using System.Data.SqlClient;
+#else
+using Microsoft.Data.SqlClient;
+#endif
+
+class FakeConnection : DbConnection
+{
+    public override string ConnectionString { get; set; } = "Data Source=fake";
+    public override string Database => "fake";
+    public override string DataSource => "fake";
+    public override string ServerVersion => "1";
+    public override ConnectionState State => ConnectionState.Open;
+    public override void ChangeDatabase(string databaseName) { }
+    public override void Close() { }
+    public override void Open() { }
+    protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => new FakeTransaction(this);
+    protected override DbCommand CreateDbCommand() => new FakeCommand { Connection = this };
+}
+
+class FakeTransaction : DbTransaction
+{
+    readonly FakeConnection connection;
+    public FakeTransaction(FakeConnection connection) { this.connection = connection; }
+    public override IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    protected override DbConnection DbConnection => connection;
+    public override void Commit() { }
+    public override void Rollback() { }
+}
+
+class FakeCommand : DbCommand
+{
+    // パラメーターの入れ物は、本物のプロバイダーのものを借りる。
+    readonly SqlCommand inner = new SqlCommand();
+    public override string CommandText { get; set; } = "";
+    public override int CommandTimeout { get; set; }
+    public override CommandType CommandType { get; set; } = CommandType.Text;
+    public override bool DesignTimeVisible { get; set; }
+    public override UpdateRowSource UpdatedRowSource { get; set; }
+    protected override DbConnection DbConnection { get; set; }
+    protected override DbParameterCollection DbParameterCollection => inner.Parameters;
+    protected override DbTransaction DbTransaction { get; set; }
+    public override void Cancel() { }
+    public override int ExecuteNonQuery() => 1;
+    public override object ExecuteScalar() => null;
+    public override void Prepare() { }
+    protected override DbParameter CreateDbParameter() => inner.CreateParameter();
+    protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior) => throw new NotSupportedException();
+}
+
+static class Program
+{
+    static void Execute(DbConnection connection, DbTransaction transaction, string sql)
+    {
+        var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
+    static void Save(DbConnection connection)
+    {
+        using (var transaction = connection.BeginTransaction())
+        {
+            Execute(connection, transaction, "INSERT INTO Orders VALUES (1)");
+            Execute(connection, transaction, "UPDATE Stock SET N = N - 1");
+            transaction.Commit();
+        }
+    }
+
+    static void Cancel(DbConnection connection)
+    {
+        var transaction = connection.BeginTransaction();
+        Execute(connection, transaction, "DELETE FROM Orders");
+        transaction.Rollback();
+    }
+
+    static DbTransaction Leave(DbConnection connection)
+    {
+        // 終えないまま残す。
+        var transaction = connection.BeginTransaction();
+        Execute(connection, transaction, "SELECT 1");
+        return transaction;
+    }
+
+    static void Main()
+    {
+        var connection = new FakeConnection();
+        Execute(connection, null, "SELECT 2");
+        Save(connection);
+        Cancel(connection);
+        var other = new FakeConnection();
+        var pending = Leave(other);
+        Console.WriteLine("done " + pending.IsolationLevel); // @done
+    }
+}

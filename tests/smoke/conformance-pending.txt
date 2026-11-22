@@ -1,0 +1,2 @@
+# 式の適合試験 (tests/apps/Console/Program.cs の Conformance) のうち、まだコンパイラと同じ結果にならない式。1 行に 1 つ。
+# 一致するようになったら、ここから消す (消し忘れると試験が落ちる)。4 通り (.NET / .NET Framework、x86 / x64) のどれかで合わないものを載せる。

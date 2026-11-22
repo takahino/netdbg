@@ -1,0 +1,38 @@
+// Edit and Continue のスモーク試験 (Test-Enc) の対象。試験がこのファイルを一時フォルダーに写してビルドし、書き換えて当てる。
+using System;
+
+static class Program
+{
+    static int counter;
+
+    static int Compute(int x)
+    {
+        return x + 1; // @compute
+    }
+
+    static int Loop()
+    {
+        int total = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            int r = Compute(10);
+            total += r; // @loop
+            Console.WriteLine("loop " + i + " " + total);
+        }
+        return total;
+    }
+
+    static int Below()
+    {
+        counter++;
+        return 5; // @below
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("start");
+        int a = Loop();
+        int b = Below();
+        Console.WriteLine("end " + a + " " + b + " " + counter); // @end
+    }
+}

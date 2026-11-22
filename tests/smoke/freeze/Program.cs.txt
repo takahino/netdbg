@@ -1,0 +1,30 @@
+// スモーク試験 Test-UiFreeze の対象: 窓を出し、少しあとに UI のスレッドで眠る (UI のフリーズ)。
+using System;
+using System.Windows.Forms;
+
+static class Program
+{
+    [STAThread]
+    static void Main()
+    {
+        var form = new Form { Text = "Freeze smoke", Width = 400, Height = 200 };
+        var timer = new Timer { Interval = 1500 };
+        timer.Tick += (s, e) =>
+        {
+            timer.Stop();
+            Freeze();
+        };
+        form.Shown += (s, e) => OnShown(timer);
+        Application.Run(form);
+    }
+
+    static void OnShown(Timer timer)
+    {
+        timer.Start(); // @shown
+    }
+
+    static void Freeze()
+    {
+        System.Threading.Thread.Sleep(8000); // @freeze
+    }
+}

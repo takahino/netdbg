@@ -1,0 +1,38 @@
+// スモーク試験 Test-BindingLog の対象: WinForms のデータバインディングが、Format と Parse の失敗を飲み込む。
+using System;
+using System.Windows.Forms;
+
+class Order
+{
+    public int Quantity { get; set; } = 3;
+    public string Code { get; set; } = "abc";
+}
+
+static class Program
+{
+    [STAThread]
+    static void Main()
+    {
+        var order = new Order();
+        var form = new Form { Text = "Bindings smoke" };
+        var quantity = new TextBox { Name = "quantityBox" };
+        var strict = new TextBox { Name = "strictBox", Top = 30 };
+        var code = new NumericUpDown { Name = "codeUpDown", Top = 60 };
+        form.Controls.AddRange(new Control[] { quantity, strict, code });
+        quantity.DataBindings.Add("Text", order, "Quantity", true);
+        strict.DataBindings.Add("Text", order, "Quantity", false);
+        // Format の失敗: 文字列 "abc" は decimal にならない。
+        code.DataBindings.Add("Value", order, "Code", true);
+        form.Shown += (s, e) =>
+        {
+            // Parse の失敗: 数ではない文字を入れて、検証で書き戻させる。
+            quantity.Text = "x1";
+            strict.Text = "x2";
+            form.ValidateChildren();
+            Console.WriteLine("done " + order.Quantity); // @done
+            // 検証に失敗したままでは、窓を閉じられない (WinForms は閉じるのを取り消す)。
+            Environment.Exit(0);
+        };
+        Application.Run(form);
+    }
+}

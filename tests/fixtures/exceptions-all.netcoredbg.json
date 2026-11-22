@@ -1,0 +1,110 @@
+{
+    "mode":  "throw",
+    "filters":  [
+                    "all"
+                ],
+    "exceptionBreakpointFilters":  [
+                                       {
+                                           "filter":  "all",
+                                           "label":  "all"
+                                       },
+                                       {
+                                           "filter":  "user-unhandled",
+                                           "label":  "user-unhandled"
+                                       }
+                                   ],
+    "capabilities":  {
+                         "supportsCancelRequest":  true,
+                         "supportsConditionalBreakpoints":  true,
+                         "supportsConfigurationDoneRequest":  true,
+                         "supportsEvaluateForHovers":  true,
+                         "supportsExceptionFilterOptions":  true,
+                         "supportsExceptionInfoRequest":  true,
+                         "supportsExceptionOptions":  false,
+                         "supportsFunctionBreakpoints":  true,
+                         "supportsGotoTargetsRequest":  true,
+                         "supportsSetExpression":  true,
+                         "supportsSetVariable":  true,
+                         "supportsTerminateRequest":  true,
+                         "supportTerminateDebuggee":  true
+                     },
+    "setExceptionBreakpoints":  {
+
+                                },
+    "stops":  [
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "Exception thrown: \u0027System.FormatException\u0027 in \u003cunknown module\u003e"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "always",
+                                            "description":  "Exception thrown: \u0027System.FormatException\u0027 in System.Private.CoreLib.dll: \u0027The input string \u0027not a number\u0027 was not in a correct format.\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.FormatException** \u0027The input string \u0027not a number\u0027 was not in a correct format.\u0027",
+                                                            "fullTypeName":  "System.FormatException",
+                                                            "message":  "The input string \u0027not a number\u0027 was not in a correct format.",
+                                                            "source":  "System.Private.CoreLib",
+                                                            "stackTrace":  "   at System.Number.ThrowFormatException[TChar](ReadOnlySpan`1 value)",
+                                                            "typeName":  "FormatException"
+                                                        },
+                                            "exceptionId":  "CLR/System.FormatException"
+                                        },
+                      "frames":  [
+                                     "System.Number.ThrowFormatException\u003cchar\u003e() :0",
+                                     "System.Int32.Parse() :0",
+                                     "Program.Main() Program.cs:90"
+                                 ]
+                  },
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "Exception thrown: \u0027System.InvalidOperationException\u0027 in SmokeConsole.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "always",
+                                            "description":  "Exception thrown: \u0027System.InvalidOperationException\u0027 in SmokeConsole.dll: \u0027boom\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.InvalidOperationException** \u0027boom\u0027",
+                                                            "fullTypeName":  "System.InvalidOperationException",
+                                                            "message":  "boom",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.Main(String[] args) in <repo>\\tests\\apps\\Console\\Program.cs:line 95",
+                                                            "typeName":  "InvalidOperationException"
+                                                        },
+                                            "exceptionId":  "CLR/System.InvalidOperationException"
+                                        },
+                      "frames":  [
+                                     "Program.Main() Program.cs:95"
+                                 ]
+                  },
+                  {
+                      "stopped":  {
+                                      "allThreadsStopped":  true,
+                                      "reason":  "exception",
+                                      "text":  "An unhandled exception of type \u0027System.InvalidOperationException\u0027 occurred in SmokeConsole.dll"
+                                  },
+                      "exceptionInfo":  {
+                                            "breakMode":  "unhandled",
+                                            "description":  "An unhandled exception of type \u0027System.InvalidOperationException\u0027 occurred in SmokeConsole.dll: \u0027boom\u0027",
+                                            "details":  {
+                                                            "evaluateName":  "$exception",
+                                                            "formattedDescription":  "**System.InvalidOperationException** \u0027boom\u0027",
+                                                            "fullTypeName":  "System.InvalidOperationException",
+                                                            "message":  "boom",
+                                                            "source":  "SmokeConsole",
+                                                            "stackTrace":  "   at Program.Main(String[] args) in <repo>\\tests\\apps\\Console\\Program.cs:line 95",
+                                                            "typeName":  "InvalidOperationException"
+                                                        },
+                                            "exceptionId":  "CLR/System.InvalidOperationException"
+                                        },
+                      "frames":  [
+                                     "Program.Main() Program.cs:95"
+                                 ]
+                  }
+              ]
+}

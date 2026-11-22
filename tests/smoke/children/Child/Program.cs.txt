@@ -1,0 +1,15 @@
+// スモーク試験 Test-ChildProcess の子: 引数の数を終了コードにする。
+using System;
+using System.Threading;
+
+static class Program
+{
+    static int Main(string[] args)
+    {
+        // .NET Framework の子は、ランタイムが読み込まれてからつなぐ。それより先に行に着かないよう、少し待つ。
+        Thread.Sleep(1000);
+        int value = int.Parse(args[0]);
+        Console.WriteLine("child " + value); // @child
+        return value;
+    }
+}
