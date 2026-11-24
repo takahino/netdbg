@@ -164,6 +164,37 @@ pub fn remove_watch(store: Store, index: usize) {
     });
 }
 
+/// 変数の欄の値を、式で書き換える（`setVariable`）。空は送らない。失敗は理由を出し、表示は元のまま。
+pub fn assign_variable(store: Store, parent: i64, name: String, value: String) {
+    if value.trim().is_empty() {
+        return;
+    }
+    spawn_local(async move {
+        if let Err(message) = api::dap("setVariable", json!({ "variablesReference": parent, "name": name, "value": value })).await {
+            store.fail(message);
+        }
+    });
+}
+
+/// ウォッチの式が指す場所を、式で書き換える（`setExpression`）。空は送らない。
+pub fn assign_expression(store: Store, expression: String, value: String) {
+    if value.trim().is_empty() {
+        return;
+    }
+    let frame = store.frame.get_untracked().unwrap_or(0);
+    spawn_local(async move {
+        if let Err(message) = api::dap("setExpression", json!({ "expression": expression, "value": value, "frameId": frame })).await {
+            store.fail(message);
+        }
+    });
+}
+
+/// 値が変わったかもしれない（`invalidated`）: 変数とウォッチを読み直す。
+pub(super) async fn refresh_shown(store: Store, frame: i64) {
+    load_variables(store, frame).await;
+    evaluate_watches(store, frame).await;
+}
+
 async fn evaluate_watches(store: Store, frame: i64) {
     let expressions: Vec<String> = store.watches.with_untracked(|w| w.iter().map(|w| w.expression.clone()).collect());
     for (index, expression) in expressions.into_iter().enumerate() {

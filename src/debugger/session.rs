@@ -209,6 +209,8 @@ struct Breakpoint {
     id: i64,
     /// クライアントが指定した行。
     line: u32,
+    /// クライアントが指定した列。無ければ、その行の最初の文。
+    column: Option<u32>,
     /// 止まる条件（式）。無ければ、当たるたびに止まる。条件の欄の印（`#once` など）は `marker` に入れ、ここには入れない。
     condition: Option<String>,
     /// ヒットカウント（`hitCondition`）。
@@ -219,6 +221,9 @@ struct Breakpoint {
     log_message: Option<String>,
     /// 実際に置けた行。まだどのモジュールにも置けていなければ `None`。
     verified_line: Option<u32>,
+    /// 結んだ文の列（1 始まり）と、その文の終わりの列（含まない）。
+    verified_column: Option<u32>,
+    verified_end_column: Option<u32>,
     bound: Vec<ComPtr<ICorDebugFunctionBreakpoint>>,
 }
 
@@ -259,6 +264,8 @@ pub struct Session {
     queued_breakpoint: Option<(u32, (String, u32, u32))>,
     /// いまのステップは、async メソッドからの stepOut の最後の段（待っていた側へ戻る）。
     landing_after_async_out: bool,
+    /// runtime-async の stepOut。続きの鎖の次のフレームに置いたブレークポイントで止まり、そこからさらに stepOut しない。
+    runtime_async_out: bool,
     /// オブジェクト ID（`netdbg.makeObjectId`）。続行しても残る。
     object_ids: Vec<inspect::ObjectId>,
     last_object_id: i64,
@@ -599,6 +606,7 @@ impl Session {
             patched_thread: None,
             queued_breakpoint: None,
             landing_after_async_out: false,
+            runtime_async_out: false,
             object_ids: Vec::new(),
             last_object_id: 0,
             last_com_objects: None,
@@ -900,6 +908,12 @@ impl Session {
         }
         // async メソッドからの stepOut の途中: 待っている側が待ち終えた。そこから stepOut する。
         if self.async_step_out.as_ref().is_some_and(|b| b.as_raw() == raw) {
+            // runtime-async は、続きの呼び出し元の await に置いてある。ここで止まる（状態機械のように、さらに stepOut しない）。
+            if self.runtime_async_out {
+                self.cancel_step();
+                self.patched_thread = Some(id);
+                return Outcome::Stop(("stopped", json!({ "reason": "step", "threadId": id, "allThreadsStopped": true })));
+            }
             self.async_step_out_reached(id);
             return Outcome::Continue;
         }

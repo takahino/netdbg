@@ -11,7 +11,7 @@ use super::probes::location_of;
 use super::*;
 use crate::debugger::coverage::{self, Coverage, Load, Role, Val};
 use std::collections::{BTreeSet, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -75,8 +75,10 @@ pub(super) struct CoverageState {
     /// 変わったファイルがあることを、時のスレッドに伝える。
     dirty: Arc<AtomicBool>,
     ticker: Option<Ticker>,
-    /// 最後に書き出したファイル。
+    /// 最後に書き出した Cobertura XML。
     written: Option<PathBuf>,
+    /// 同じ内容の HTML（XML の隣）。
+    html: Option<PathBuf>,
 }
 
 impl CoverageState {
@@ -502,6 +504,9 @@ impl Session {
         if let Some(path) = &self.coverage.written {
             body["path"] = json!(path.to_string_lossy());
         }
+        if let Some(path) = &self.coverage.html {
+            body["html"] = json!(path.to_string_lossy());
+        }
         body
     }
 
@@ -548,8 +553,11 @@ impl Session {
         }
         let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
         std::fs::write(&path, self.coverage.data.to_cobertura(timestamp)).map_err(|e| tr!("Cannot write the coverage to {path}: {error}", path = path.display(), error = e))?;
-        crate::log!("coverage written: {}", path.display());
+        let html_path = html_beside(&path);
+        std::fs::write(&html_path, self.coverage.data.to_html()).map_err(|e| tr!("Cannot write the coverage to {path}: {error}", path = html_path.display(), error = e))?;
+        crate::log!("coverage written: {} {}", path.display(), html_path.display());
         self.coverage.written = Some(path.clone());
+        self.coverage.html = Some(html_path);
         Ok(path)
     }
 
@@ -564,15 +572,17 @@ impl Session {
             Ok(path) => {
                 let summary = self.coverage_summary();
                 let totals = self.coverage.data.totals();
+                let html = self.coverage.html.as_ref().map(|p| p.display().to_string()).unwrap_or_default();
                 let text = tr!(
-                    "Coverage: lines {lines}/{all_lines} ({line_rate}%), branches {branches}/{all_branches} ({branch_rate}%), written to {path}.\n",
+                    "Coverage: lines {lines}/{all_lines} ({line_rate}%), branches {branches}/{all_branches} ({branch_rate}%), written to {path} and {html}.\n",
                     lines = totals.lines_covered,
                     all_lines = totals.lines_valid,
                     line_rate = format!("{:.0}", totals.line_rate() * 100.0),
                     branches = totals.branches_covered,
                     all_branches = totals.branches_valid,
                     branch_rate = format!("{:.0}", totals.branch_rate() * 100.0),
-                    path = path.display()
+                    path = path.display(),
+                    html = html
                 );
                 out.push(("netdbg.coverage", summary));
                 out.push(("output", json!({ "category": "console", "output": text })));
@@ -676,6 +686,13 @@ fn default_output(folder: Option<&Path>, program: Option<&str>) -> PathBuf {
     unsafe { win32::GetLocalTime(&mut time) };
     let stamp = format!("{:04}{:02}{:02}-{:02}{:02}{:02}", time[0], time[1], time[3], time[4], time[5], time[6]);
     base.join(format!("{name}-{stamp}.cobertura.xml"))
+}
+
+/// XML の隣に置く HTML。`Program-20261124-120000.cobertura.xml` なら `Program-20261124-120000.coverage.html`。
+fn html_beside(xml: &Path) -> PathBuf {
+    let name = xml.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "coverage.xml".into());
+    let stem = name.strip_suffix(".cobertura.xml").or_else(|| name.strip_suffix(".xml")).unwrap_or(&name);
+    xml.with_file_name(format!("{stem}.coverage.html"))
 }
 
 /// カバレッジの保存先の引数（`folder`）。

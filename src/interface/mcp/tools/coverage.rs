@@ -10,14 +10,15 @@ pub(in crate::interface::mcp) fn tools() -> Vec<Value> {
         "Line and branch coverage of the program being debugged (its own code with symbols; the .NET libraries are not counted): \
          which lines ran and, for each branch (if, while, ?:, &&, ||, switch), which ways it went. Turn it on with enabled: true \
          (from then on; for the whole run, start the program with coverage); it is written as Cobertura XML (ReportGenerator, \
-         GitHub, Azure Pipelines, GitLab read it) when the program ends, or now with write: true. file gives the state of each line \
+         GitHub, Azure Pipelines, GitLab read it) and as one self-contained HTML file beside it, with the same marks as the UI, \
+         when the program ends, or now with write: true. file gives the state of each line \
          of one source file (hit, and per branch the ways seen). A line counts as run once (no hit counts). Branches whose ways \
          cannot be told apart are left out and counted in uncountableBranches.",
         json!({
             "enabled": { "type": "boolean", "description": "Start (true) or stop (false) counting. Omit to only read." },
             "output": { "type": "string", "description": "With enabled: the Cobertura XML file to write (default: under %LOCALAPPDATA%\\netdbg\\coverage)." },
             "folder": { "type": "string", "description": "The folder (absolute) to write <program>-<time>.cobertura.xml into, now and later (default %LOCALAPPDATA%\\netdbg\\coverage)." },
-            "write": { "type": "boolean", "description": "Write the Cobertura XML now and return its path." },
+            "write": { "type": "boolean", "description": "Write the Cobertura XML and the HTML file now and return their paths." },
             "file": { "type": "string", "description": "A source file: return the state of each of its lines." },
         }),
         &[],

@@ -144,7 +144,7 @@ of the window. Selecting a control frames it on the picture. The picture is take
 Turn on *Collect coverage* in **Open** (DAP: `coverage`; MCP: `coverage`). Lines that ran get ●, lines that did not ○,
 and branches where only some ways ran ◐ (point at the mark to see which). The rates are shown at the top, per file in
 Sources, and **Write XML** writes Cobertura XML (also at the end of the run), which ReportGenerator, GitHub, Azure
-Pipelines and GitLab read.
+Pipelines and GitLab read, and one HTML file beside it (`*.coverage.html`) that holds every source file, with the same marks.
 
 ![A test report item](images/en/report.png)
 
@@ -217,7 +217,16 @@ command = "C:\\tools\\netdbg\\x86\\netdbg.exe"
 args = ["--mcp-connect"]
 ```
 
-Use `--mcp` instead of `--mcp-connect` for the AI to run the engine itself.
+To let the AI run the engine, register one server per bitness with `--mcp`. Use the server that matches the program. `dbgshim.dll` and `encdelta` of that bitness must sit next to the exe.
+
+```json
+{
+  "mcpServers": {
+    "netdbg-x86": { "command": "C:\\tools\\netdbg\\x86\\netdbg.exe", "args": ["--mcp"] },
+    "netdbg-x64": { "command": "C:\\tools\\netdbg\\x64\\netdbg.exe", "args": ["--mcp"] }
+  }
+}
+```
 
 ### Tools
 

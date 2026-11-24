@@ -15,6 +15,14 @@ pub(super) struct PendingLambda {
     pub(super) locals: Vec<(u32, String)>,
 }
 
+/// 捕まえないラムダを置くコンパイラのクラス（`<>c`、ジェネリックなメソッドの `<>c__0`）。表示用のクラス
+/// （`<>c__DisplayClass`）は含めない。
+fn is_singleton_class(name: &str) -> bool {
+    // 型引数の数（`<>c__0`1`）は名前のうしろに付く。
+    let name = name.split('`').next().unwrap_or(name);
+    name == "<>c" || name.strip_prefix("<>c__").is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()))
+}
+
 impl Writer<'_> {
     /// コンパイラが作ったラムダのメソッド（`<Run>b__2_0`）を、式 1 つのラムダ（`x => x * 3 + 1`）として書く。入れられる
     /// のは、何も捕まえないもの（`<>c` のシングルトンのメソッド）と、`this` だけを使うもの（同じ型のインスタンスのメソッド）
@@ -26,11 +34,12 @@ impl Writer<'_> {
         let name = md.string(md.cell(METHOD_DEF, row, 3));
         // 表示用のクラスを戻したラムダ（`closures.rs`）は、必ず入れる（外のメソッドは、表示用のクラスを消してある）。
         let closure = self.closures.contains(&row) && target.is_none();
-        if (!self.inline_lambdas && !closure) || self.written.contains(&row) || !(name.starts_with('<') && name.contains(">b__")) {
+        if self.written.contains(&row) || !(name.starts_with('<') && name.contains(">b__")) {
             return None;
         }
         let declaring = md.declaring_type(row)?;
-        let singleton = matches!(target, Some(Expr::Field { target: None, .. })) && md.string(md.cell(TYPE_DEF, declaring, 1)) == "<>c";
+        // 捕まえないラムダは `<>c` のメソッド。ジェネリックなメソッドは `<>c__0` のように番号が付く。
+        let singleton = matches!(target, Some(Expr::Field { target: None, .. })) && is_singleton_class(md.string(md.cell(TYPE_DEF, declaring, 1)));
         let own_instance = target == Some(&Expr::Arg(0)) && Some(declaring) == self.type_row;
         if !singleton && !own_instance && !closure {
             return None;
@@ -55,9 +64,12 @@ impl Writer<'_> {
             [single] => single.clone(),
             _ => format!("({})", parameters.join(", ")),
         };
+        // 使い回しのフィールドが残るメソッドは、式 1 つか中身の無いラムダだけ入れる（大きな本体はメソッドのまま）。
+        let allow_block = self.inline_lambdas || closure;
         match self.expression_lambda(&prepared, &arguments, &generics, row, closure) {
             Some(text) => Some(format!("{head} => {text}")),
-            None => Some(format!("{head} =>{}", self.block_lambda(&prepared, &arguments, &generics, row, closure)?)),
+            None if allow_block || prepared.statements.is_empty() => Some(format!("{head} =>{}", self.block_lambda(&prepared, &arguments, &generics, row, closure)?)),
+            None => None,
         }
     }
 
@@ -94,14 +106,19 @@ impl Writer<'_> {
     /// });
     /// ```
     ///
-    /// 返す文字列は、改行から始まり、本体の開き括弧の前に目印（`MARK`）を持つ。goto のあるものは入れない（メソッドの
-    /// まま残す）。表示用のクラスを戻したもの（`closure`）も同じ書き方。
+    /// 返す文字列は、改行から始まり、本体の開き括弧の前に目印（`MARK`）を持つ。中身が無ければ ` { }`。goto のあるものは
+    /// 入れない（メソッドのまま残す）。表示用のクラスを戻したもの（`closure`）も同じ書き方。
     fn block_lambda(&self, prepared: &Prepared, arguments: &[String], generics: &Generics, row: u32, closure: bool) -> Option<String> {
         let names = self.names;
         let mut jumps = false;
         visit(&prepared.statements, &mut |s| jumps |= matches!(s.kind, StmtKind::Goto(_) | StmtKind::Label(_)));
-        if jumps || prepared.statements.is_empty() {
+        if jumps {
             return None;
+        }
+        // 中身の無いラムダ（`()` => { }）。
+        if prepared.statements.is_empty() {
+            self.pending_lambdas.borrow_mut().push(PendingLambda { row, offsets: prepared.applied.end.clone(), body: None, locals: Vec::new() });
+            return Some(" { }".to_string());
         }
         // ラムダのローカル変数は、外のローカル変数や引数と同じ名前にできない（CS0136）。
         let avoid: Vec<String> = arguments.iter().chain(self.locals).chain(self.arguments).cloned().collect();

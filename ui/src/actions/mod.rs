@@ -19,7 +19,7 @@ pub use records::*;
 pub use report::*;
 pub use source::*;
 
-use inspect::load_variables;
+use inspect::refresh_shown;
 use records::{send_exception_settings, send_record_conditions};
 use source::send_breakpoints;
 
@@ -158,7 +158,7 @@ fn follow_up(store: Store, follow: Follow) {
         Follow::Continued | Follow::Ended => store.clear_stop(),
         Follow::Refresh => {
             if let Some(frame) = store.frame.get_untracked() {
-                spawn_local(async move { load_variables(store, frame).await });
+                spawn_local(async move { refresh_shown(store, frame).await });
             }
         }
         Follow::Coverage(files) => {

@@ -436,14 +436,20 @@ pub fn process_module_ranges(process_id: u32) -> Vec<ModuleRange> {
 }
 
 /// このエンジンのビット数の CONTEXT（スタックウォークで読むレジスター）の形。ビット数で形が違うので、バインディングと
-/// 同じく、ここに閉じ込める（使う側は `CONTEXT_SIZE`、`CONTEXT_CONTROL`、`context_ip` だけを見る）。
+/// 同じく、ここに閉じ込める（使う側は `CONTEXT_SIZE`、`CONTEXT_CONTROL`、`context_ip`、`context_sp` だけを見る）。
 #[cfg(target_arch = "x86")]
 mod context_layout {
     pub const SIZE: usize = 716;
     /// Eip の位置。
     pub const IP: usize = 0xB8;
+    /// Esp の位置（Eip、SegCs、EFlags の次）。
+    pub const SP: usize = 0xC4;
+    /// Ecx の位置（インスタンス メソッドの this）。
+    pub const CX: usize = 0xAC;
     /// CONTEXT_i386 | CONTEXT_CONTROL。
     pub const CONTROL: u32 = 0x0001_0001;
+    /// CONTEXT_i386 | CONTEXT_INTEGER。
+    pub const INTEGER: u32 = 0x0001_0002;
     /// CONTEXT_i386 | CONTEXT_DEBUG_REGISTERS と、ContextFlags、Dr0、Dr6、Dr7 の位置。
     pub const DEBUG: u32 = 0x0001_0010;
     pub const FLAGS: usize = 0x00;
@@ -458,8 +464,14 @@ mod context_layout {
     pub const SIZE: usize = 1232;
     /// Rip の位置。
     pub const IP: usize = 0xF8;
+    /// Rsp の位置。
+    pub const SP: usize = 0x98;
+    /// Rcx の位置（インスタンス メソッドの this）。
+    pub const CX: usize = 0x80;
     /// CONTEXT_AMD64 | CONTEXT_CONTROL。
     pub const CONTROL: u32 = 0x0010_0001;
+    /// CONTEXT_AMD64 | CONTEXT_INTEGER。
+    pub const INTEGER: u32 = 0x0010_0002;
     /// CONTEXT_AMD64 | CONTEXT_DEBUG_REGISTERS と、ContextFlags、Dr0、Dr6、Dr7 の位置。
     pub const DEBUG: u32 = 0x0010_0010;
     pub const FLAGS: usize = 0x30;
@@ -471,6 +483,7 @@ mod context_layout {
 }
 pub const CONTEXT_SIZE: usize = context_layout::SIZE;
 pub const CONTEXT_CONTROL: u32 = context_layout::CONTROL;
+pub const CONTEXT_INTEGER: u32 = context_layout::INTEGER;
 
 /// 書き込みの見張りに、ネイティブのコードから書かれると対象が落ちるか（D-093）。
 pub const NATIVE_WRITE_ENDS_TARGET: bool = context_layout::NATIVE_WRITE_ENDS_TARGET;
@@ -514,7 +527,21 @@ pub fn set_write_watch(context: &mut [u8], watch: Option<(usize, usize)>) {
 
 /// CONTEXT の命令の番地。
 pub fn context_ip(context: &[u8]) -> Option<usize> {
-    let bytes = context.get(context_layout::IP..context_layout::IP + std::mem::size_of::<usize>())?;
+    context_usize(context, context_layout::IP)
+}
+
+/// CONTEXT のスタックの番地。
+pub fn context_sp(context: &[u8]) -> Option<usize> {
+    context_usize(context, context_layout::SP)
+}
+
+/// CONTEXT の、インスタンス メソッドの this が入るレジスター（x86 は Ecx、x64 は Rcx）。
+pub fn context_cx(context: &[u8]) -> Option<usize> {
+    context_usize(context, context_layout::CX)
+}
+
+fn context_usize(context: &[u8], at: usize) -> Option<usize> {
+    let bytes = context.get(at..at + std::mem::size_of::<usize>())?;
     Some(usize::from_le_bytes(bytes.try_into().ok()?))
 }
 

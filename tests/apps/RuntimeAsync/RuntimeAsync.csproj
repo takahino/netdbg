@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- .NET 11 の runtime-async（状態機械を作らない async）。SDK は target/dotnet11/sdk。
+       機械に .NET 11 が無くても動くように、ランタイムを同梱する。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <DebugType>portable</DebugType>
+    <AssemblyName>SmokeRuntimeAsync</AssemblyName>
+    <Nullable>disable</Nullable>
+    <Features>$(Features);runtime-async=on</Features>
+  </PropertyGroup>
+</Project>

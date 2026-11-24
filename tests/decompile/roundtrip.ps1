@@ -6,6 +6,7 @@
   tests/decompile/samples/<名前>/Program.cs を、.NET 10 と net48、Debug と Release でビルドし、エンジンの
   `--decompile` で C# に戻す。戻した C# をビルドし直して動かし、もとのプログラムと同じ出力になるかを比べる。
   C# に戻せず IL で書いたメソッドの数、ビルドし直したときのエラーの数も出す。
+  見本 Using は、別アセンブリの StringWriter が using に戻ることと、列挙子が using にならないことも見る。
 
 .PARAMETER Exe
   使うエンジン（既定は dist\x86\netdbg.exe）。
@@ -40,6 +41,46 @@ function New-Project([string]$Folder, [string]$Name, [string]$Tfm) {
 </Project>
 "@
     [IO.File]::WriteAllText((Join-Path $Folder "$Name.csproj"), $project)
+}
+
+function Get-MethodText([string]$all, [string]$name) {
+    $at = 0
+    while (($found = $all.IndexOf("$name(", $at)) -ge 0) {
+        $brace = $all.IndexOf('{', $found)
+        if ($brace -lt 0) { return $null }
+        $between = $all.Substring($found, $brace - $found)
+        if ($between -notmatch ';') {
+            $depth = 0
+            for ($i = $brace; $i -lt $all.Length; $i++) {
+                $ch = $all[$i]
+                if ($ch -eq '{') { $depth++ }
+                elseif ($ch -eq '}') {
+                    $depth--
+                    if ($depth -eq 0) { return $all.Substring($brace, $i - $brace + 1) }
+                }
+            }
+            return $null
+        }
+        $at = $found + $name.Length + 1
+    }
+    return $null
+}
+
+# 見本 Using。StringWriter は別アセンブリの型で、using に戻す。列挙子は using にしない。
+function Test-UsingShape([string]$Name, [string]$Folder) {
+    if ($Name -ne 'Using') { return @() }
+    $all = (Get-ChildItem $Folder -Filter *.cs -Recurse | ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join "`n"
+    $problems = @()
+    foreach ($method in 'Quoted', 'FromCall') {
+        $body = Get-MethodText $all $method
+        if (-not $body) { $problems += "$method が無い"; continue }
+        if ($body -notmatch 'using\s*\(') { $problems += "$method が using になっていない" }
+        if ($body -match '\?\.Dispose\s*\(') { $problems += "$method が ?.Dispose のまま" }
+    }
+    $sum = Get-MethodText $all 'Sum'
+    if (-not $sum) { $problems += 'Sum が無い' }
+    elseif ($sum -match 'using\s*\(') { $problems += 'Sum の列挙子が using になっている' }
+    return $problems
 }
 
 function Invoke-Build([string]$Folder, [string]$Configuration, [string]$Output) {
@@ -81,12 +122,14 @@ foreach ($s in $samples) {
                 $ErrorActionPreference = 'Stop'
                 $same = $expected -eq $actual
             }
-            $ok = $rebuilt.Ok -and $same -and $fallback -eq 0
+            $shape = @(Test-UsingShape $s.Name $decompiled)
+            $ok = $rebuilt.Ok -and $same -and $fallback -eq 0 -and $shape.Count -eq 0
             $line = "${label}: IL に落ちたメソッド $fallback、ビルドのエラー $($errors.Count)、出力 $(if ($same) { '同じ' } elseif ($rebuilt.Ok) { '違う' } else { '-' })  ($summary)"
             if ($ok) {
                 Write-Host "  ok    $line"
             } else {
                 Write-Host "  FAIL  $line" -ForegroundColor Red
+                $shape | ForEach-Object { Write-Host "          $_" }
                 $errors | Select-Object -First 15 | ForEach-Object { Write-Host "          $_" }
                 if ($rebuilt.Ok -and -not $same) {
                     Write-Host "          もと: $($expected -replace "`n", ' | ')"

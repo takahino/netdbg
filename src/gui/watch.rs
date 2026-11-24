@@ -23,6 +23,17 @@ const SETTLE: Duration = Duration::from_millis(50);
 const POLL: Duration = Duration::from_secs(1);
 /// 窓が答えないときに、読み直すまで待つ時間。
 const RETRY: Duration = Duration::from_millis(500);
+/// 木が一度も読めていない間の間隔。速い起動では、最初の停止が最初の読みより先になる。
+const STARTUP: Duration = Duration::from_millis(50);
+
+/// 次の読みまで待つ時間。`None` は待たずに読む（見始めた直後）。
+/// 木が一度も無い間は短く繰り返す。1 秒待つと、その間に止まった変化が、あとの最初の読みへ吸い込まれて消える。
+fn pause_before_read(reads: u32, have_tree: bool, retry: bool) -> Option<Duration> {
+    if reads == 0 {
+        return None;
+    }
+    Some(if !have_tree { STARTUP } else if retry { RETRY } else { POLL })
+}
 /// 止まっている間は、中身（文字、チェック、選んだ項目）を読めないコントロールの種類。
 const UNREADABLE_WHILE_STOPPED: &[&str] = &["TextBox", "RichTextBox", "ComboBox", "ListBox", "CheckBox", "RadioButton"];
 /// 読むコントロールの数の上限。
@@ -120,21 +131,30 @@ pub fn start(process_id: u32) -> Result<Watcher, String> {
     let state = Arc::new(Mutex::new(State::default()));
     let shared = state.clone();
     super::spawn(move || {
-        // 知らせのあと（続く知らせをまとめてから）と、知らせが無くても `POLL` ごとに読む。窓が答えずに読めなかったら、
-        // `RETRY` で読み直す（始めは、窓がまだ無いことがある）。
+        // 始めに待たずに 1 回読む。その後は、知らせのあと（続く知らせをまとめてから）と、知らせが無くても間隔を置いて読む。
+        // 木が一度も無い間は短く繰り返す（窓がまだ無い、答えられない）。読めたあとは、答えられなければ `RETRY`、そうでなければ `POLL`。
+        let mut reads = 0u32;
+        let mut have_tree = false;
         let mut retry = true;
         loop {
-            match receiver.recv_timeout(if retry { RETRY } else { POLL }) {
-                Ok(handle) => {
-                    lock(&shared).dirty.insert(handle);
-                    while let Ok(handle) = receiver.recv_timeout(SETTLE) {
+            if let Some(wait) = pause_before_read(reads, have_tree, retry) {
+                match receiver.recv_timeout(wait) {
+                    Ok(handle) => {
                         lock(&shared).dirty.insert(handle);
+                        while let Ok(handle) = receiver.recv_timeout(SETTLE) {
+                            lock(&shared).dirty.insert(handle);
+                        }
                     }
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
                 }
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
-                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
             }
-            retry = !read_into(process_id, &shared);
+            reads += 1;
+            let read = read_into(process_id, &shared);
+            if read {
+                have_tree = true;
+            }
+            retry = !read;
         }
     });
     drop(sender);
@@ -149,7 +169,8 @@ fn lock(state: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
 fn read_into(process_id: u32, state: &Mutex<State>) -> bool {
     // 止まっている対象を読みにいくと、コントロールごとに待ってしまう。先に、窓が答えるかを見る。
     let windows = super::snapshot(process_id, false, MAX_CONTROLS);
-    let Some(top) = windows.elements.iter().find(|e| e.depth == 0) else { return true };
+    // 窓がまだ無い回を成功にすると、次は 1 秒待ちになる。その間に最初の停止が来ると、比べる元が空のまま残る。
+    let Some(top) = windows.elements.iter().find(|e| e.depth == 0) else { return false };
     if !super::responds(top.id) {
         return false;
     }
@@ -229,6 +250,9 @@ impl State {
         if self.baseline.as_ref().is_none_or(|b| b.controls.is_empty()) {
             self.baseline = Some(read.clone());
         }
+        // 止まる前に名前を読めなかった木へ、動いている間に読めた名前と、止まっている間は読めない値を写す。
+        // ラベルの文字は写さない（止まったときの文字が、次の停止との比べる元）。
+        self.adopt_details(&read);
         // 前の停止で読めなかった分は、いま読めた値を比べる元にする（止まる前の変化を、次の停止でまた出さない。ほかの分を
         // 入れ直すと、続行したあとの変化が消えるので入れ直さない）。
         let fix = std::mem::take(&mut self.fix_baseline);
@@ -241,6 +265,55 @@ impl State {
         }
         self.last = Some(read);
         self.dirty.clear();
+    }
+
+    /// まだ一度も読めていない停止で、メッセージを送らずに取れる木を比べる元にする。
+    /// 名前は空のまま。次に動いている間に読めた木から `adopt_details` が名前だけを足す。
+    fn seed_stopped(&mut self, process_id: u32) {
+        let snapshot = super::snapshot(process_id, false, MAX_CONTROLS);
+        let titles: HashMap<usize, String> = snapshot.elements.iter().filter(|e| e.depth == 0).map(|e| (e.window, super::text_without_messages(e.id))).collect();
+        if titles.is_empty() {
+            return;
+        }
+        let mut read = Read::default();
+        for e in snapshot.elements.iter().filter(|e| e.depth > 0) {
+            let kind = e.kind.to_string();
+            let text = if UNREADABLE_WHILE_STOPPED.contains(&kind.as_str()) { None } else { Some(super::text_without_messages(e.id)) };
+            read.index.insert(e.id, read.controls.len());
+            read.controls.push(Control {
+                window: titles.get(&e.window).cloned().unwrap_or_default(),
+                name: None,
+                kind,
+                text,
+                checked: None,
+                enabled: e.enabled,
+                visible: e.visible,
+            });
+        }
+        if read.controls.is_empty() {
+            return;
+        }
+        self.baseline = Some(read.clone());
+        self.last = Some(read);
+    }
+
+    /// 名前の無い比べる元へ、あとから読めた名前と、止まっている間は読めない値（文字、チェック）を写す。
+    fn adopt_details(&mut self, read: &Read) {
+        let Some(baseline) = self.baseline.as_mut() else { return };
+        let pairs: Vec<(usize, usize)> = baseline.index.iter().filter_map(|(handle, &b)| read.index.get(handle).map(|&r| (b, r))).collect();
+        for (b, r) in pairs {
+            let source = &read.controls[r];
+            let dest = &mut baseline.controls[b];
+            if dest.name.is_none() {
+                dest.name.clone_from(&source.name);
+            }
+            if dest.checked.is_none() {
+                dest.checked = source.checked;
+            }
+            if dest.text.is_none() && UNREADABLE_WHILE_STOPPED.contains(&dest.kind.as_str()) {
+                dest.text.clone_from(&source.text);
+            }
+        }
     }
 
     /// 止まった: 前の停止からの変化を返し、いまの木を次の比べる元にする。`now` は、止まっていても読めるコントロールの
@@ -277,6 +350,13 @@ impl Watcher {
     /// 止まった: 前の停止からの変化を返し、いまの木を次の比べる元にする。
     pub fn at_stop(&self) -> AtStop {
         let process_id = self.process_id;
+        {
+            let mut state = lock(&self.state);
+            // 起動が速く、最初の読みより先に止まると、あとの読みが比べる元になり、その前の変化が消える。
+            if state.last.is_none() {
+                state.seed_stopped(process_id);
+            }
+        }
         lock(&self.state).at_stop(&|handle| {
             // WPF のコントロール（窓ではない。番号は UI Automation のもの）は読み直さない。
             (super::process_of(handle) == process_id).then(|| {
@@ -377,5 +457,38 @@ mod tests {
         let mut state = State::default();
         let found = state.at_stop(&stopped(""));
         assert!(!found.compared && found.changes.is_empty());
+    }
+
+    /// 名前の無い、止まった瞬間の木（ラベルの文字は空）。
+    fn seeded(label: &str) -> Read {
+        let controls = vec![
+            Control { window: "Smoke GUI".into(), name: None, kind: "TextBox".into(), text: None, checked: None, enabled: true, visible: true },
+            Control { window: "Smoke GUI".into(), name: None, kind: "CheckBox".into(), text: None, checked: None, enabled: true, visible: true },
+            Control { window: "Smoke GUI".into(), name: None, kind: "Label".into(), text: Some(label.into()), checked: None, enabled: true, visible: true },
+        ];
+        Read { controls, index: [(1, 0), (2, 1), (3, 2)].into_iter().collect(), ..Read::default() }
+    }
+
+    #[test]
+    fn the_first_read_waits_for_nothing_and_an_unread_tree_is_retried_quickly() {
+        assert_eq!(pause_before_read(0, false, true), None);
+        assert_eq!(pause_before_read(1, false, true), Some(STARTUP));
+        assert_eq!(pause_before_read(2, true, true), Some(RETRY));
+        assert_eq!(pause_before_read(2, true, false), Some(POLL));
+    }
+
+    #[test]
+    fn a_stop_before_any_read_keeps_that_labels_text_as_the_baseline() {
+        let mut state = State::default();
+        let seed = seeded("");
+        state.baseline = Some(seed.clone());
+        state.last = Some(seed);
+        let found = state.at_stop(&stopped(""));
+        assert!(found.changes.is_empty(), "{:?}", found.changes);
+        // 続行したあと、ハンドラーがラベルを書いてから、初めて名前つきで読めた。
+        let later = read("", false, "Hello");
+        state.read(later);
+        let found = state.at_stop(&stopped("Hello"));
+        assert_eq!(whats(&found), [("resultLabel".into(), "text".into(), "Hello".into())]);
     }
 }

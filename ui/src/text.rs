@@ -103,6 +103,9 @@ pub fn not_stopped() -> &'static str {
 pub fn add_watch() -> &'static str {
     tr("Add an expression (Enter)")
 }
+pub fn edit_value() -> &'static str {
+    tr("Edit this value as an expression (Enter). Escape leaves it unchanged.")
+}
 pub fn evaluate() -> &'static str {
     tr("Evaluate an expression (Enter)")
 }
@@ -296,7 +299,7 @@ pub fn coverage_option() -> &'static str {
     tr("Collect coverage")
 }
 pub fn coverage_option_hint() -> &'static str {
-    tr("Counts the lines run and the ways each branch (if, while, ?:, &&, ||, switch) went, and colors the source. Writes Cobertura XML at the end. It pauses briefly the first time a place runs, so it is a little slower.")
+    tr("Counts the lines run and the ways each branch (if, while, ?:, &&, ||, switch) went, and colors the source. Writes Cobertura XML and an HTML file beside it at the end. It pauses briefly the first time a place runs, so it is a little slower.")
 }
 pub fn coverage_hint() -> &'static str {
     tr("Coverage: ● run ○ not run ◐ some branches (hover over a mark to see each branch).")

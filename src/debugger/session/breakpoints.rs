@@ -44,6 +44,8 @@ impl Session {
         let mut fresh = Vec::with_capacity(items.len());
         for item in items {
             let line = item.get("line").and_then(Value::as_u64).unwrap_or(0) as u32;
+            // 列は 1 始まり。0 と欠ける指定は、行の最初の文（今までの結び方）。
+            let column = item.get("column").and_then(Value::as_u64).filter(|&c| c > 0).map(|c| c as u32);
             // 条件の欄の印（`#once` など）は、C# の式としては評価しない（hits.rs）。
             let condition = condition_of(item);
             let marker = condition.as_deref().and_then(hits::Marker::parse);
@@ -53,7 +55,7 @@ impl Session {
                 self.deferred.push(("output", json!({ "category": "console", "output": format!("Ignored hit count condition \"{text}\": use N, ==N, >=N, >N or %N.\n") })));
             }
             let log_message = item.get("logMessage").and_then(Value::as_str).map(str::to_string);
-            fresh.push(Breakpoint { id: self.next_breakpoint_id, line, condition: if marker.is_some() { None } else { condition }, hit_condition, marker, log_message, verified_line: None, bound: Vec::new() });
+            fresh.push(Breakpoint { id: self.next_breakpoint_id, line, column, condition: if marker.is_some() { None } else { condition }, hit_condition, marker, log_message, verified_line: None, verified_column: None, verified_end_column: None, bound: Vec::new() });
             self.next_breakpoint_id += 1;
         }
 
@@ -127,11 +129,16 @@ impl Session {
 }
 
 pub(super) fn describe(breakpoint: &Breakpoint) -> Value {
-    json!({
+    let mut described = json!({
         "id": breakpoint.id,
         "verified": breakpoint.verified_line.is_some(),
         "line": breakpoint.verified_line.unwrap_or(breakpoint.line),
-    })
+    });
+    if let (Some(column), Some(end)) = (breakpoint.verified_column, breakpoint.verified_end_column) {
+        described["column"] = json!(column);
+        described["endColumn"] = json!(end);
+    }
+    described
 }
 
 /// ブレークポイントの指定に付いた条件。空なら、条件なし。
@@ -171,11 +178,20 @@ pub(super) fn bind_function(module: &Module, breakpoint: &mut FunctionBreakpoint
 /// ブレークポイントを、モジュールの該当する場所に置く。そのモジュールにソースが無ければ何もしない。
 pub(super) fn bind(module: &Module, source: &str, breakpoint: &mut Breakpoint) {
     let Some(pdb) = module.pdb.as_ref() else { return };
-    let Some(location) = pdb.find_document(source).and_then(|document| pdb.resolve_line(document, breakpoint.line)) else { return };
+    let Some(document) = pdb.find_document(source) else { return };
+    // 列があるときはその文。無ければ、その行の最初の文。
+    let Some(location) = (match breakpoint.column {
+        Some(column) => pdb.resolve_column(document, breakpoint.line, column),
+        None => pdb.resolve_line(document, breakpoint.line),
+    }) else {
+        return;
+    };
     match unsafe { break_at(&module.module, location.method, location.il_offset) } {
         Ok(created) => {
             breakpoint.bound.push(created);
             breakpoint.verified_line.get_or_insert(location.line);
+            breakpoint.verified_column.get_or_insert(location.column);
+            breakpoint.verified_end_column.get_or_insert(location.end_column);
         }
         Err(e) => crate::log!("breakpoint {} at {source}:{}: {e}", breakpoint.id, breakpoint.line),
     }

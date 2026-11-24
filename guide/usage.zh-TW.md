@@ -112,7 +112,7 @@
 
 ![原始程式碼上的涵蓋範圍](images/en/coverage.png)
 
-在「開啟」中開啟「收集涵蓋範圍」（DAP：`coverage`；MCP：`coverage`）。已執行的行標記為 ●，未執行的行標記為 ○，只走過部分方向的分支標記為 ◐（將滑鼠指向標記可查看是哪個方向）。比率顯示在頂部和「原始程式檔」中的每個檔案旁；「寫入 XML」會寫出 Cobertura XML（執行結束時也會寫出），ReportGenerator、GitHub、Azure Pipelines 和 GitLab 都能讀取。
+在「開啟」中開啟「收集涵蓋範圍」（DAP：`coverage`；MCP：`coverage`）。已執行的行標記為 ●，未執行的行標記為 ○，只走過部分方向的分支標記為 ◐（將滑鼠指向標記可查看是哪個方向）。比率顯示在頂部和「原始程式檔」中的每個檔案旁；「寫入 XML」會寫出 Cobertura XML，並把其中的全部原始程式收成旁邊的一個 HTML（`*.coverage.html`，執行結束時也會寫出），ReportGenerator、GitHub、Azure Pipelines 和 GitLab 都能讀取該 XML。
 
 ![測試報告的項目](images/en/report.png)
 
@@ -171,7 +171,16 @@ command = "C:\\tools\\netdbg\\x86\\netdbg.exe"
 args = ["--mcp-connect"]
 ```
 
-要讓 AI 自己執行引擎，請用 `--mcp` 取代 `--mcp-connect`。
+要讓 AI 自己執行引擎，請按位元數用 `--mcp` 註冊。使用與目標相同位元數的伺服器。exe 旁邊需要相同位元數的 `dbgshim.dll` 和 `encdelta`。
+
+```json
+{
+  "mcpServers": {
+    "netdbg-x86": { "command": "C:\\tools\\netdbg\\x86\\netdbg.exe", "args": ["--mcp"] },
+    "netdbg-x64": { "command": "C:\\tools\\netdbg\\x64\\netdbg.exe", "args": ["--mcp"] }
+  }
+}
+```
 
 ### 工具
 

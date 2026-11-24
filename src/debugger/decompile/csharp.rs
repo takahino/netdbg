@@ -1,7 +1,7 @@
 //! 文と式の木を、C# として書く。演算子の優先順位に合わせて括弧を付け、系列点を打つ行（文の行、`if` / `while` の行、
 //! `do` の終わりの `while` の行）を記録する。
 
-use super::ast::{CmpOp, Expr, Part, Stmt, StmtKind};
+use super::ast::{Case, CmpOp, Expr, Part, Stmt, StmtKind};
 use super::body::{self, MethodBody};
 use super::build::{self, temp_name};
 use super::flow;
@@ -25,6 +25,8 @@ mod precedence {
     pub const ASSIGN: u8 = 1;
     pub const CONDITIONAL: u8 = 2;
     pub const COALESCE: u8 = 3;
+    pub const OR_ELSE: u8 = 4;
+    pub const AND_ALSO: u8 = 5;
     pub const BIT_OR: u8 = 6;
     pub const BIT_XOR: u8 = 7;
     pub const BIT_AND: u8 = 8;
@@ -303,7 +305,12 @@ impl<'a> Writer<'a> {
                 text.line(depth, "{");
                 for section in sections {
                     for case in &section.cases {
-                        text.line(depth + 1, &format!("case {cast}{case}:"));
+                        let label = match case {
+                            Case::Int(case) => format!("case {cast}{case}:"),
+                            Case::Char(case) => format!("case {}:", char_literal(*case)),
+                            Case::Str(case) => format!("case {}:", string_literal(case)),
+                        };
+                        text.line(depth + 1, &label);
                     }
                     if section.default {
                         text.line(depth + 1, "default:");
@@ -463,7 +470,7 @@ impl<'a> Writer<'a> {
                 if *checked { primary(format!("checked({cast})")) } else { (cast, p::UNARY) }
             }
             // 表示用のクラスのラムダの中: `this.<>4__this` は外の `this`。
-            Expr::Field { target: Some(target), token } if self.closure_body && **target == Expr::Arg(0) && n.md.field_declaration(*token & 0x00FF_FFFF).is_some_and(|(_, f)| f.name == "<>4__this") => primary("this".into()),
+            Expr::Field { target: Some(target), token } if self.closure_body && **target == Expr::Arg(0) && n.is_outer_this_field(*token) => primary("this".into()),
             Expr::Field { target, token } => {
                 let (owner, name) = n.field_parts(*token, g);
                 // decimal の定数は、リテラルで書く（`decimal.Zero` → `0m`）。
@@ -583,6 +590,8 @@ impl<'a> Writer<'a> {
             Expr::Assign(target, value) => (format!("{} = {}", self.expr(target, p::ASSIGN + 1), self.expr(value, p::ASSIGN)), p::ASSIGN),
             Expr::Conditional(condition, a, b) => (format!("{} ? {} : {}", self.expr(condition, p::COALESCE), self.expr(a, p::CONDITIONAL), self.expr(b, p::CONDITIONAL)), p::CONDITIONAL),
             Expr::Coalesce(a, b) => (format!("{} ?? {}", self.expr(a, p::COALESCE + 1), self.expr(b, p::COALESCE)), p::COALESCE),
+            Expr::OrElse(a, b) => (format!("{} || {}", self.expr(a, p::OR_ELSE), self.expr(b, p::OR_ELSE + 1)), p::OR_ELSE),
+            Expr::AndAlso(a, b) => (format!("{} && {}", self.expr(a, p::AND_ALSO), self.expr(b, p::AND_ALSO + 1)), p::AND_ALSO),
             Expr::Initializer { new, collection, members } => {
                 let items: Vec<String> = if !collection.is_empty() {
                     collection
@@ -782,7 +791,7 @@ pub fn write_method_body(scope: &Scope, row: u32, body: &MethodBody, generics: &
     writer.out_arguments = names.out_parameters((METHOD_DEF as u32) << 24 | row).into_iter().map(|i| i as u32 + has_this as u32).collect();
     writer.type_row = names.md.declaring_type(row);
     writer.argument_types = has_this.then_some(None).into_iter().chain(signature.params.iter().map(|t| Some(t.clone()))).collect();
-    let context = sugar::Context { names, returns_void: true, locals: 0 };
+    let context = sugar::Context { names, returns_void: true, locals: 0, local_types: &[] };
     let mut caches = false;
     super::ast::visit_expressions(&statements, &mut |e| caches |= sugar::is_cache_field(&context, e));
     writer.inline_lambdas = !caches;
@@ -852,7 +861,7 @@ pub(super) fn prepare(names: &Names, image: &[u8], row: u32, body: &MethodBody) 
     // 捕まえた変数を、表示用のクラスのフィールドから変数に戻す（書き方の変換の前に。最初の代入での宣言にまとめるため）。
     let arguments = ilview::argument_names(names, row, &signature);
     let lifted = super::closures::lift(names, image, &arguments, &mut locals, &mut statements);
-    let applied = sugar::apply(&sugar::Context { names, returns_void: signature.ret.is_void(), locals: locals.len() }, &mut statements);
+    let applied = sugar::apply(&sugar::Context { names, returns_void: signature.ret.is_void(), locals: locals.len(), local_types: &locals }, &mut statements);
     let (initializer, before_initializer) = if constructor { take_initializer(&mut statements, value_type)?.map_or((None, 0), |(stmt, index)| (Some(stmt), index)) } else { (None, 0) };
     Ok(Prepared { signature, locals, statements, temps: built.temps, applied, initializer, before_initializer, real_locals, lifted })
 }

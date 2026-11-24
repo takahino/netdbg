@@ -97,17 +97,16 @@ sealed class DapClient : IDisposable
 
 static class RunCommand
 {
-    const string PendingHeader = "# 総当たり試験で、まだコンパイラと合わない式 (tests/conformance/sweep.ps1 -UpdatePending が作る)。合うようになったら消す。";
-    const string RejectedPendingHeader = "# C# のコンパイラは拒むのに、エンジンが評価してしまう式 (tests/conformance/sweep.ps1 -Rejected -UpdatePending が作る)。拒むようになったら消す。";
-
     /// 戻り値は、失敗があれば 1。
-    public static int Run(string engine, string app, string source, string sweep, string pendingDirectory, bool rejected, bool updatePending, string? match, string arch)
+    public static int Run(string engine, string app, string source, string dataDirectory, string pendingDirectory, bool rejected, bool updatePending, string? match, string arch, string marker = "@sweep", string suite = "sweep")
     {
         var utf8 = new UTF8Encoding(false);
-        var texts = File.ReadAllLines(Path.Combine(sweep, "texts.txt"), utf8);
-        var types = File.ReadAllLines(Path.Combine(sweep, "types.txt"), utf8);
-        var pendingPath = Path.Combine(pendingDirectory, "sweep-pending.txt");
-        var rejectedPendingPath = Path.Combine(pendingDirectory, "sweep-rejected-pending.txt");
+        var pendingHeader = $"# {suite} 試験で、まだコンパイラと合わない式 (tests/conformance/{suite}.ps1 -UpdatePending が作る)。合うようになったら消す。";
+        var rejectedPendingHeader = $"# C# のコンパイラは拒むのに、エンジンが評価してしまう式 (tests/conformance/{suite}.ps1 -Rejected -UpdatePending が作る)。拒むようになったら消す。";
+        var texts = File.ReadAllLines(Path.Combine(dataDirectory, "texts.txt"), utf8);
+        var types = File.ReadAllLines(Path.Combine(dataDirectory, "types.txt"), utf8);
+        var pendingPath = Path.Combine(pendingDirectory, $"{suite}-pending.txt");
+        var rejectedPendingPath = Path.Combine(pendingDirectory, $"{suite}-rejected-pending.txt");
         var pending = ReadList(pendingPath);
         var rejectedPending = ReadList(rejectedPendingPath);
         var filter = match == null ? null : new Regex(match);
@@ -116,7 +115,7 @@ static class RunCommand
         using var dap = new DapClient(engine);
         dap.Request("initialize", new JsonObject { ["adapterID"] = "netdbg" });
         dap.Request("launch", new JsonObject { ["program"] = app });
-        var line = Array.FindIndex(File.ReadAllLines(source), l => Regex.IsMatch(l, @"@sweep(?![\w-])")) + 1;
+        var line = Array.FindIndex(File.ReadAllLines(source), l => Regex.IsMatch(l, Regex.Escape(marker) + @"(?![\w-])")) + 1;
         dap.Request("setBreakpoints", new JsonObject { ["source"] = new JsonObject { ["path"] = source }, ["breakpoints"] = new JsonArray(new JsonObject { ["line"] = line }) });
         dap.Request("configurationDone");
         var thread = (int)dap.WaitEvent("stopped")["body"]!["threadId"]!;
@@ -170,9 +169,9 @@ static class RunCommand
             if (!pending.Contains(text)) report.Add($"{text}\t{(succeeded ? $"{result} : {type}" : $"失敗: {(string?)actual["message"]}")}\t{expectedShown}");
         }
         Console.WriteLine($"受け付けた式: {matched + wrong.Count} 件中 {matched} 件がコンパイラと一致 (未対応の一覧 {pending.Count} 件)");
-        var reportPath = Path.Combine(sweep, $"mismatch-{arch}.tsv");
+        var reportPath = Path.Combine(dataDirectory, $"mismatch-{arch}.tsv");
         File.WriteAllLines(reportPath, report, utf8);
-        if (updatePending) File.WriteAllLines(pendingPath, wrong.Prepend(PendingHeader), utf8);
+        if (updatePending) File.WriteAllLines(pendingPath, wrong.Prepend(pendingHeader), utf8);
         else failures += Complain(report, $"一覧に無いのに合わない式 (式、エンジン、コンパイラ: {reportPath})") + Complain(nowMatching, "合うようになったのに一覧に残っている式 (-UpdatePending で作り直す)");
 
         // --- コンパイラが拒んだ式: エンジンも拒むこと ---
@@ -182,7 +181,7 @@ static class RunCommand
             report = [];
             var nowRejected = new List<string>();
             var total = 0;
-            foreach (var entry in File.ReadAllLines(Path.Combine(sweep, "rejected.txt"), utf8))
+            foreach (var entry in File.ReadAllLines(Path.Combine(dataDirectory, "rejected.txt"), utf8))
             {
                 var parts = entry.Split('\t');
                 var text = parts[0];
@@ -198,9 +197,9 @@ static class RunCommand
                 if (!rejectedPending.Contains(text)) report.Add($"{text}\t{(string?)actual["body"]!["result"]} : {(string?)actual["body"]!["type"]}\t{parts[1]}");
             }
             Console.WriteLine($"拒まれた式: {total} 件中 {total - evaluated.Count} 件をエンジンも拒む (未対応の一覧 {rejectedPending.Count} 件)");
-            reportPath = Path.Combine(sweep, $"accepted-{arch}.tsv");
+            reportPath = Path.Combine(dataDirectory, $"accepted-{arch}.tsv");
             File.WriteAllLines(reportPath, report, utf8);
-            if (updatePending) File.WriteAllLines(rejectedPendingPath, evaluated.Prepend(RejectedPendingHeader), utf8);
+            if (updatePending) File.WriteAllLines(rejectedPendingPath, evaluated.Prepend(rejectedPendingHeader), utf8);
             else failures += Complain(report, $"一覧に無いのに評価してしまう式 (式、エンジン、コンパイラのエラー: {reportPath})") + Complain(nowRejected, "拒むようになったのに一覧に残っている式 (-UpdatePending で作り直す)");
         }
         dap.Request("disconnect", new JsonObject { ["terminateDebuggee"] = true });

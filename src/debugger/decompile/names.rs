@@ -294,7 +294,7 @@ impl<'a> Names<'a> {
             Ty::Named { token, .. } => self.type_token(*token, &[], g),
             Ty::Generic { token, arguments, .. } => {
                 let arguments: Vec<String> = arguments.iter().map(|a| self.ty(a, g)).collect();
-                if self.is_nullable(*token) && arguments.len() == 1 {
+                if self.is_nullable_type(*token) && arguments.len() == 1 {
                     return format!("{}?", arguments[0]);
                 }
                 self.type_token(*token, &arguments, g)
@@ -315,12 +315,16 @@ impl<'a> Names<'a> {
         }
     }
 
-    /// `System.Nullable<T>` か。
-    fn is_nullable(&self, token: u32) -> bool {
+    /// `System.Nullable<T>` か。構築された `Nullable<int>`（TypeSpec）も含む。
+    pub fn is_nullable_type(&self, token: u32) -> bool {
         let row = token & 0x00FF_FFFF;
         match (token >> 24) as usize {
             TYPE_REF => self.md.string(self.md.cell(TYPE_REF, row, 2)) == "System" && self.md.string(self.md.cell(TYPE_REF, row, 1)) == "Nullable`1",
             TYPE_DEF => self.md.string(self.md.cell(TYPE_DEF, row, 2)) == "System" && self.md.string(self.md.cell(TYPE_DEF, row, 1)) == "Nullable`1",
+            TYPE_SPEC => match self.md.blob(self.md.cell(TYPE_SPEC, row, 0)).and_then(sig::type_spec) {
+                Ok(Ty::Generic { token, .. }) => self.is_nullable_type(token),
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -576,6 +580,60 @@ impl<'a> Names<'a> {
             _ => false,
         }
     }
+
+    /// `using` と `foreach` に戻してよいか。このモジュールの型は、`IDisposable` か `IAsyncDisposable` を実装しているかを見る。
+    /// ほかのアセンブリの型は実装が読めないので、変数の型そのものがそのインターフェイスであるときだけ戻す。
+    pub fn is_disposable(&self, ty: &Ty) -> bool {
+        match ty.unmodified() {
+            Ty::Named { token, .. } | Ty::Generic { token, .. } => self.disposable_token(*token, 0),
+            Ty::ByRef(inner) | Ty::Pointer(inner) => self.is_disposable(inner),
+            _ => false,
+        }
+    }
+
+    fn disposable_token(&self, token: u32, depth: u32) -> bool {
+        if depth > 16 {
+            return false;
+        }
+        if self.disposable_name(token) {
+            return true;
+        }
+        let row = token & 0x00FF_FFFF;
+        if (token >> 24) as usize != TYPE_DEF || row == 0 {
+            return false;
+        }
+        use crate::debugger::metadata::INTERFACE_IMPL;
+        let interfaces = self.md.matching_rows(INTERFACE_IMPL, 0, row).into_iter().map(|r| sig::type_def_or_ref_token(self.md.cell(INTERFACE_IMPL, r, 1)));
+        let base = sig::type_def_or_ref_token(self.md.cell(TYPE_DEF, row, 3));
+        interfaces.chain((base & 0x00FF_FFFF != 0).then_some(base)).any(|next| self.disposable_token(next, depth + 1))
+    }
+
+    fn disposable_name(&self, token: u32) -> bool {
+        let row = token & 0x00FF_FFFF;
+        let raw = match (token >> 24) as usize {
+            TYPE_DEF => self.md.string(self.md.cell(TYPE_DEF, row, 1)),
+            TYPE_REF => self.md.string(self.md.cell(TYPE_REF, row, 1)),
+            TYPE_SPEC => {
+                let Some(ty) = self.md.blob(self.md.cell(TYPE_SPEC, row, 0)).ok().and_then(|blob| sig::type_spec(blob).ok()) else { return false };
+                return match ty {
+                    Ty::Named { token, .. } | Ty::Generic { token, .. } => self.disposable_name(token),
+                    _ => false,
+                };
+            }
+            _ => return false,
+        };
+        let name = raw.split('`').next().unwrap_or(raw);
+        matches!(name, "IDisposable" | "IAsyncDisposable")
+    }
+
+    /// このモジュールのメソッドが、拡張メソッドか（`this` の印が付いている）。
+    pub fn is_extension_method(&self, token: u32) -> bool {
+        if (token >> 24) as usize != METHOD_DEF {
+            return false;
+        }
+        self.md.method_shape(token & 0x00FF_FFFF).is_some_and(|shape| shape.is_extension)
+    }
+
     /// メソッドを宣言している型のトークン（TypeDef、TypeRef、TypeSpec）。`new` の式の型に使う。
     pub fn method_owner(&self, token: u32) -> Option<u32> {
         let row = token & 0x00FF_FFFF;
@@ -640,6 +698,16 @@ impl<'a> Names<'a> {
                 format!("{ty} {declaring}.{}", ident(self.md.string(self.md.cell(MEMBER_REF, row, 1))))
             }
             _ => format!("[0x{token:08X}]"),
+        }
+    }
+
+    /// 表示用のクラスの、外の `this` を入れたフィールド（`<>4__this`）。ジェネリックな型では MemberRef。
+    pub fn is_outer_this_field(&self, token: u32) -> bool {
+        let row = token & 0x00FF_FFFF;
+        match (token >> 24) as usize {
+            FIELD => self.md.field_declaration(row).is_some_and(|(_, field)| field.name == "<>4__this"),
+            MEMBER_REF => self.md.string(self.md.cell(MEMBER_REF, row, 1)) == "<>4__this",
+            _ => false,
         }
     }
 

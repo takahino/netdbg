@@ -112,7 +112,7 @@
 
 ![源文件上的覆盖率](images/en/coverage.png)
 
-在“打开”中打开“收集覆盖率”（DAP：`coverage`；MCP：`coverage`）。已运行的行标记为 ●，未运行的行标记为 ○，只走过部分方向的分支标记为 ◐（将鼠标指向标记可查看是哪个方向）。比率显示在顶部和“源文件”中的每个文件旁；“写入 XML”会写出 Cobertura XML（运行结束时也会写出），ReportGenerator、GitHub、Azure Pipelines 和 GitLab 都能读取。
+在“打开”中打开“收集覆盖率”（DAP：`coverage`；MCP：`coverage`）。已运行的行标记为 ●，未运行的行标记为 ○，只走过部分方向的分支标记为 ◐（将鼠标指向标记可查看是哪个方向）。比率显示在顶部和“源文件”中的每个文件旁；“写入 XML”会写出 Cobertura XML，并把其中的全部源文件收成旁边的一个 HTML（`*.coverage.html`，运行结束时也会写出），ReportGenerator、GitHub、Azure Pipelines 和 GitLab 都能读取该 XML。
 
 ![测试报告的项目](images/en/report.png)
 
@@ -171,7 +171,16 @@ command = "C:\\tools\\netdbg\\x86\\netdbg.exe"
 args = ["--mcp-connect"]
 ```
 
-要让 AI 自己运行引擎，请用 `--mcp` 代替 `--mcp-connect`。
+要让 AI 自己运行引擎，请按位数用 `--mcp` 注册。使用与目标相同位数的服务器。exe 旁边需要相同位数的 `dbgshim.dll` 和 `encdelta`。
+
+```json
+{
+  "mcpServers": {
+    "netdbg-x86": { "command": "C:\\tools\\netdbg\\x86\\netdbg.exe", "args": ["--mcp"] },
+    "netdbg-x64": { "command": "C:\\tools\\netdbg\\x64\\netdbg.exe", "args": ["--mcp"] }
+  }
+}
+```
 
 ### 工具
 

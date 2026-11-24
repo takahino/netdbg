@@ -11,7 +11,7 @@ impl Session {
         }
         // async メソッドからの stepOut: 待っている呼び出し元（の続き）に戻れるよう、対象のコードを動かして準備する
         // （ステッパーを仕掛ける前に。関数評価は対象を動かすので）。
-        let async_out = if kind == StepKind::Out { self.prepare_async_step_out(thread) } else { None };
+        let (async_out, runtime_async_out) = if kind == StepKind::Out { self.prepare_async_step_out(thread) } else { (None, false) };
         // async メソッドの続き（一度中断したあと）では、スタックの下にあるのは呼び出し元ではない（続きを走らせた仕組みや、
         // 待ちを終わらせた別のメソッド）。ふつうの stepOut は仕掛けず、待っている側の知らせだけを待つ。
         if async_out.is_none() {
@@ -19,6 +19,7 @@ impl Session {
         } else {
             self.cancel_step();
         }
+        self.runtime_async_out = runtime_async_out;
         self.async_step_out = async_out;
         self.stepping_in = kind == StepKind::In;
         self.leaving_filtered = false;
@@ -177,6 +178,7 @@ impl Session {
             unsafe { breakpoint.Activate(0) };
         }
         self.landing_after_async_out = false;
+        self.runtime_async_out = false;
         self.remove_return_value_breakpoints();
         self.remove_await_breakpoints();
         self.end_target_step();
@@ -189,33 +191,49 @@ impl Session {
     /// そこに当たったら、そこから stepOut すれば、待っている呼び出し元（`await` の行か、`GetResult()` の行）に着く。
     /// async メソッドでない、まだ一度も中断していない（呼び出し元に、ふつうの stepOut で戻れる）、準備できない、ときは
     /// `None`（ふつうの stepOut だけになる）。
-    fn prepare_async_step_out(&mut self, thread: u32) -> Option<ComPtr<ICorDebugFunctionBreakpoint>> {
+    fn prepare_async_step_out(&mut self, thread: u32) -> (Option<ComPtr<ICorDebugFunctionBreakpoint>>, bool) {
         // いちばん上のフレームが、await を持つ async メソッドの本体（状態機械の MoveNext）で、続きの中か。
         // 最初の区間（中断する前）は、すぐ下が `AsyncMethodBuilderCore.Start` で、その下が呼び出し元。
-        let in_continuation = (|| {
+        // PDB に async の情報が無いメソッドは、runtime-async かもしれない（続きの鎖の次のフレームに置く）。
+        enum Which {
+            /// PDB に await が無い。runtime-async なら続きの鎖へ置く。
+            Runtime,
+            /// 状態機械の続き。
+            Machine,
+            /// ふつうの stepOut（async でない、まだ一度も中断していない）。
+            Plain,
+        }
+        let which = (|| {
             let frames = self.walk_frames(thread).ok()?;
             let frame = frames.first()?;
             let mut method = 0u32;
             unsafe { frame.GetFunctionToken(&mut method) };
-            if unsafe { self.frame_module(frame) }?.pdb.as_ref()?.awaits(method, frame_version(frame)).is_empty() {
-                return Some(false);
+            let awaits = unsafe { self.frame_module(frame) }.and_then(|module| module.pdb.as_ref()).map(|pdb| !pdb.awaits(method, frame_version(frame)).is_empty());
+            if !awaits.unwrap_or(false) {
+                return Some(Which::Runtime);
             }
             let caller = frames.get(1).and_then(|caller| {
                 let mut token = 0u32;
                 unsafe { caller.GetFunctionToken(&mut token) };
                 unsafe { self.frame_module(caller) }?.metadata()?.method_name(token)
             });
-            Some(!caller.is_some_and(|name| name.ends_with("AsyncMethodBuilderCore.Start")))
+            Some(if caller.is_some_and(|name| name.ends_with("AsyncMethodBuilderCore.Start")) { Which::Plain } else { Which::Machine })
         })()
-        .unwrap_or(false);
-        if !in_continuation {
-            return None;
+        .unwrap_or(Which::Plain);
+        if matches!(which, Which::Runtime) {
+            return match self.runtime_async_step_out_breakpoint(thread) {
+                Some(breakpoint) => (Some(breakpoint), true),
+                None => (None, false),
+            };
         }
-        let this = self.top_this(thread)?;
-        let builder = unsafe { value::field(&this, &self.modules, "<>t__builder") }?;
+        if matches!(which, Which::Plain) {
+            return (None, false);
+        }
+        let Some(this) = self.top_this(thread) else { return (None, false) };
+        let Some(builder) = (unsafe { value::field(&this, &self.modules, "<>t__builder") }) else { return (None, false) };
         if let Err(e) = self.evaluate_on(thread, &builder, "SetNotificationForWaitCompletion(true)") {
             crate::log!("async step out: SetNotificationForWaitCompletion: {e}");
-            return None;
+            return (None, false);
         }
         // Task は System.Private.CoreLib（.NET Framework では mscorlib）にある。
         let found = self.modules.iter().find_map(|module| {
@@ -226,9 +244,9 @@ impl Session {
         });
         let Some((module, method)) = found else {
             crate::log!("async step out: Task.NotifyDebuggerOfWaitCompletion not found");
-            return None;
+            return (None, false);
         };
-        unsafe { break_at(&module, method, 0) }.map_err(|e| crate::log!("async step out: {e}")).ok()
+        (unsafe { break_at(&module, method, 0) }.map_err(|e| crate::log!("async step out: {e}")).ok(), false)
     }
 
     /// async メソッドからの stepOut で、待っている側が待ち終えた（`Task.NotifyDebuggerOfWaitCompletion` に当たった）。
@@ -263,8 +281,16 @@ impl Session {
                 frame.GetFunctionToken(&mut method);
                 frame.cast::<ICorDebugILFrame>().ok()?.GetIP(&mut offset, &mut mapping);
             }
+            let version = frame_version(frame);
+            let mut points = module.pdb.as_ref()?.awaits(method, version).to_vec();
+            // runtime-async は状態機械を作らず、PDB に AsyncMethodSteppingInformation が無い。
+            // 中断は `AsyncHelpers.Await` の呼び出し、再開はその次の命令（どちらも利用者のメソッド自身）。
+            if points.is_empty() {
+                let il = unsafe { method_il(frame) }?;
+                points = runtime_async_awaits(&il, module.metadata()?);
+            }
             let mut armed = Vec::new();
-            for point in module.pdb.as_ref()?.awaits(method, frame_version(frame)) {
+            for point in &points {
                 // いまの文の、これから通る await だけ。
                 if point.yield_offset < offset.max(range.startOffset) || point.yield_offset >= range.endOffset {
                     continue;
@@ -486,4 +512,17 @@ impl Session {
         self.handles.clear();
         Ok(())
     }
+}
+
+/// runtime-async の中断と再開。`AsyncHelpers.Await` の呼び出しが中断で、その次の命令が再開。
+/// 状態機械の PDB（`AsyncMethodSteppingInformation`）が付いているメソッドは、こちらを使わない。
+pub(super) fn runtime_async_awaits(il: &[u8], metadata: &crate::debugger::metadata::Metadata) -> Vec<crate::debugger::pdb::Await> {
+    crate::debugger::il::find_calls(il, 0, il.len() as u32)
+        .into_iter()
+        .filter(|(_, token)| metadata.call_name(*token) == "AsyncHelpers.Await")
+        .map(|(offset, _)| crate::debugger::pdb::Await {
+            yield_offset: offset,
+            resume_offset: crate::debugger::il::decode(il, offset).map(|instruction| instruction.end()).unwrap_or(offset.saturating_add(5)),
+        })
+        .collect()
 }

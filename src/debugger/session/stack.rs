@@ -70,7 +70,7 @@ impl Session {
             frames.push(unsafe { self.describe_frame(frame_id, frame) });
         }
         // await のあとで再開した async メソッドなら、await している呼び出し元を挟む（async_stack.rs）。
-        let frames = self.with_async_callers(&walked, frames);
+        let frames = self.with_async_callers(id, &walked, frames);
         // マネージドのフレームのあいだに、渡った先のネイティブのモジュールを 1 行ずつ挟む（D-090）。
         let frames = self.with_native_boundaries(id, &walked, frames, &natives);
         let total = frames.len();

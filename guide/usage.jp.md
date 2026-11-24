@@ -146,8 +146,8 @@ SQL とダイアログの止める条件の欄に文字を入れると、その�
 
 「開く」で「カバレッジを取る」を入れます(DAP: `coverage`、MCP: `coverage`)。通った行は ●、通っていない行は ○、
 分かれ道の一部の向きだけ通った行は ◐ になります(印にマウスを載せると、どの向きかが出ます)。率は上の帯と、ソースの
-一覧のファイルごとに出ます。「XML を書く」で Cobertura の XML を書きます(終わったときにも書きます)。
-ReportGenerator、GitHub、Azure Pipelines、GitLab が読めます。
+一覧のファイルごとに出ます。「XML を書く」で Cobertura の XML を書き、その中の全ソースを隣の 1 つの HTML（`*.coverage.html`）にまとめます(終わったときにも書きます)。
+ReportGenerator、GitHub、Azure Pipelines、GitLab が XML を読めます。
 
 ![成績書の項目](images/ja/report.png)
 
@@ -220,7 +220,16 @@ command = "C:\\tools\\netdbg\\x86\\netdbg.exe"
 args = ["--mcp-connect"]
 ```
 
-AI にエンジンを動かさせるときは、`--mcp-connect` の代わりに `--mcp` にします。
+AI にエンジンを動かさせるときは、ビット数ごとに `--mcp` で登録します。対象と同じビット数のサーバーを使います。exe の隣に、同じビット数の `dbgshim.dll` と `encdelta` が要ります。
+
+```json
+{
+  "mcpServers": {
+    "netdbg-x86": { "command": "C:\\tools\\netdbg\\x86\\netdbg.exe", "args": ["--mcp"] },
+    "netdbg-x64": { "command": "C:\\tools\\netdbg\\x64\\netdbg.exe", "args": ["--mcp"] }
+  }
+}
+```
 
 ### ツール
 

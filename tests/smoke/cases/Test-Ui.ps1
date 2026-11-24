@@ -165,6 +165,7 @@ function Test-Ui([string]$ArchName, [string]$Exe) {
 
     if ($env:NETDBG_SKIP_UI_TESTS -ne '1') {
         Test-UiBrowser $ArchName $Exe
+        Test-UiEdit $ArchName $Exe
         Test-UiCoverage $ArchName $Exe
         Test-UiExceptions $ArchName $Exe
     }
@@ -504,6 +505,130 @@ function Test-UiEnglish([string]$ArchName, [string]$Exe) {
     } finally {
         if ($browser) { Stop-Browser $browser }
         Stop-UiEngine $engine
+    }
+}
+
+# 止まっている値を式で書き換える。変数の木とウォッチ。型が合わなければ理由を出して表示は元のまま。観察専用は欄を出さない。
+function Test-UiEdit([string]$ArchName, [string]$Exe) {
+    if ($env:NETDBG_SKIP_UI_TESTS -eq '1') { return }
+    Import-Module (Join-Path $PSScriptRoot '..\Cdp.psm1') -Force
+    $app = Get-AppPath $ArchName
+    if (-not (Test-Path $app)) { return }
+    $source = Join-Path $root 'tests\apps\Console\Program.cs'
+    $line = Get-MarkerLine $source 'after-call'
+    $engine = $null
+    $browser = $null
+    $events = $null
+    try {
+        $engine = Start-UiEngine $Exe @() "edit-$($script:flavor.Dir)-$ArchName"
+        $bearer = @{ Authorization = "Bearer $($engine.Token)" }
+        $events = Open-UiEvents "$($engine.Base)/events?token=$($engine.Token)"
+        $dap = { param([string]$Command, $Arguments = @{}) (Invoke-UiHttp "$($engine.Base)/dap" 'POST' $bearer (@{ command = $Command; arguments = $Arguments } | ConvertTo-Json -Depth 10 -Compress)).Text | ConvertFrom-Json }
+        [void](& $dap 'initialize' @{ adapterID = 'netdbg'; supportsInvalidatedEvent = $true })
+        [void](& $dap 'launch' @{ program = $app })
+        [void](& $dap 'setBreakpoints' @{ source = @{ path = $source }; breakpoints = @(@{ line = $line }) })
+        [void](& $dap 'configurationDone')
+        $stopped = Wait-UiEvent $events { param($m) $m.event -eq 'stopped' }
+        Check $ArchName '画面 (書き換え): 変数の行で止まる' ($null -ne $stopped) $(if ($stopped) { $stopped.body.reason } else { 'stopped が来ない' })
+        $browser = Start-Browser $engine.Url
+        [void](Wait-Browser $browser "[...document.querySelectorAll('button')].some(b => b.innerText.trim() == '変数')" 15000)
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('button')].find(b => b.innerText.trim() == '変数').click()")
+        $local = "[...document.querySelectorAll('.tree li')].find(li => { const n = li.querySelector(':scope > .name'); return n && n.textContent.trim() == 'r' && li.innerText.includes('42'); })"
+        $shown = Wait-Browser $browser $local 15000
+        Check $ArchName '画面 (書き換え): 止めたローカルが出る' $shown ''
+        [void](Invoke-BrowserScript $browser "$local.querySelector('.value.editable').click()")
+        $ready = Wait-Browser $browser 'document.querySelector("input.value-edit")'
+        Check $ArchName '画面 (書き換え): 値を押すと入力欄になる' $ready ''
+        [void](Invoke-BrowserScript $browser @'
+(() => {
+const input = document.querySelector('input.value-edit');
+input.value = '99';
+input.dispatchEvent(new Event('input', { bubbles: true }));
+input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+})()
+'@)
+        $changed = Wait-Browser $browser "[...document.querySelectorAll('.tree li')].some(li => { const n = li.querySelector(':scope > .name'); return n && n.textContent.trim() == 'r' && li.innerText.includes('99'); })" 10000
+        Check $ArchName '画面 (書き換え): 式で直すと表示が変わる' $changed ''
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('.tree li')].find(li => { const n = li.querySelector(':scope > .name'); return n && n.textContent.trim() == 'r' && li.innerText.includes('99'); }).querySelector('.value.editable').click()")
+        [void](Wait-Browser $browser 'document.querySelector("input.value-edit")')
+        [void](Invoke-BrowserScript $browser @'
+(() => {
+const input = document.querySelector('input.value-edit');
+input.value = '"text"';
+input.dispatchEvent(new Event('input', { bubbles: true }));
+input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+})()
+'@)
+        $kept = Wait-Browser $browser "document.querySelector('.error') && /変換/.test(document.querySelector('.error').innerText) && [...document.querySelectorAll('.tree li')].some(li => { const n = li.querySelector(':scope > .name'); return n && n.textContent.trim() == 'r' && li.innerText.includes('99'); })" 10000
+        Check $ArchName '画面 (書き換え): 型が合わないと理由が出て、表示は元のまま' $kept $(if ($browser) { Invoke-BrowserScript $browser "(document.querySelector('.error') || {}).innerText || ''" })
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('button')].find(b => b.innerText.trim() == 'ウォッチ').click()")
+        $watchReady = Wait-Browser $browser 'document.querySelector("input.expression")'
+        Check $ArchName '画面 (書き換え): ウォッチの欄がある' $watchReady ''
+        [void](Invoke-BrowserScript $browser @'
+(() => {
+const input = document.querySelector('input.expression');
+input.value = 'r';
+input.dispatchEvent(new Event('input', { bubbles: true }));
+input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+})()
+'@)
+        $watched = Wait-Browser $browser "[...document.querySelectorAll('.watch li')].some(li => li.innerText.includes('99'))" 10000
+        Check $ArchName '画面 (書き換え): ウォッチに値が出る' $watched ''
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('.watch li')].find(li => li.innerText.includes('99')).querySelector('.value.editable').click()")
+        [void](Wait-Browser $browser 'document.querySelector("input.value-edit")')
+        [void](Invoke-BrowserScript $browser @'
+(() => {
+const input = document.querySelector('input.value-edit');
+input.value = '7';
+input.dispatchEvent(new Event('input', { bubbles: true }));
+input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+})()
+'@)
+        $watchChanged = Wait-Browser $browser "[...document.querySelectorAll('.watch li')].some(li => li.innerText.includes('7'))" 10000
+        Check $ArchName '画面 (書き換え): ウォッチの値を式で直すと表示が変わる' $watchChanged ''
+    } catch {
+        Check $ArchName '画面 (書き換え): 例外なしで終わる' $false $_.Exception.Message
+    } finally {
+        if ($browser) { Stop-Browser $browser }
+        if ($events) { $events.Response.Close() }
+        if ($engine) { Stop-UiEngine $engine }
+    }
+
+    $engine = $null
+    $browser = $null
+    $events = $null
+    $target = $null
+    try {
+        $target = Start-Process -FilePath $app -ArgumentList 'wait' -PassThru -WindowStyle Hidden
+        Start-Sleep -Seconds 2
+        $engine = Start-UiEngine $Exe @() "edit-observe-$($script:flavor.Dir)-$ArchName"
+        $bearer = @{ Authorization = "Bearer $($engine.Token)" }
+        $events = Open-UiEvents "$($engine.Base)/events?token=$($engine.Token)"
+        $dap = { param([string]$Command, $Arguments = @{}) (Invoke-UiHttp "$($engine.Base)/dap" 'POST' $bearer (@{ command = $Command; arguments = $Arguments } | ConvertTo-Json -Depth 10 -Compress)).Text | ConvertFrom-Json }
+        [void](& $dap 'initialize' @{ adapterID = 'netdbg' })
+        $attach = & $dap 'attach' @{ processId = $target.Id; observeOnly = $true; justMyCode = $true }
+        [void](& $dap 'configurationDone')
+        Start-Sleep -Seconds 1
+        [void](& $dap 'pause' @{ threadId = 0 })
+        $paused = Wait-UiEvent $events { param($m) $m.event -eq 'stopped' } 15000
+        Check $ArchName '画面 (書き換え): 観察専用で止まる' ($null -ne $paused) $(if ($attach) { $attach.message } else { '' })
+        $browser = Start-Browser $engine.Url
+        [void](Wait-Browser $browser "[...document.querySelectorAll('button')].some(b => b.innerText.trim() == 'スレッド')" 15000)
+        # 一時停止の知らせは、マネージドのフレームが無いスレッドのことがある。利用者のスレッドを選ぶ。
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('button')].find(b => b.innerText.trim() == 'スレッド').click()")
+        [void](Wait-Browser $browser "[...document.querySelectorAll('.threads li')].some(li => li.innerText.includes('Main Thread'))" 15000)
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('.threads li')].find(li => li.innerText.includes('Main Thread')).click()")
+        [void](Invoke-BrowserScript $browser "[...document.querySelectorAll('button')].find(b => b.innerText.trim() == '変数').click()")
+        $values = Wait-Browser $browser 'document.querySelector(".tree .value")' 15000
+        $editable = Invoke-BrowserScript $browser 'document.querySelector(".value.editable") ? "yes" : "no"'
+        Check $ArchName '画面 (書き換え): 観察専用では欄が出ない' ($values -and $editable -eq 'no') "values=$values editable=$editable"
+    } catch {
+        Check $ArchName '画面 (書き換え): 観察専用が例外なしで終わる' $false $_.Exception.Message
+    } finally {
+        if ($browser) { Stop-Browser $browser }
+        if ($events) { $events.Response.Close() }
+        if ($engine) { Stop-UiEngine $engine }
+        if ($target -and -not $target.HasExited) { Stop-Process -Id $target.Id -Force }
     }
 }
 

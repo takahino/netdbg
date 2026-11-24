@@ -9,7 +9,7 @@
 //!   （coverlet と同じ単位）。向きの見分け方は IL から決める（`decisions`）。見分けられない分かれ道は数えない。
 //!
 //! 集め方（どこにブレークポイントを置き、当たったら何を付けるか）はセッションの側（`session/coverage.rs`）。ここは、
-//! 置く場所と役目（`Role`）を決め、当たった印を付け、要約と Cobertura XML を作る。
+//! 置く場所と役目（`Role`）を決め、当たった印を付け、要約と Cobertura XML と、それを読む HTML を作る。
 
 use crate::debugger::decompile::{self, names::Names};
 use crate::debugger::il::{Flow, Instruction, Value as Operand};
@@ -907,6 +907,68 @@ impl Coverage {
         xml.push_str("  </packages>\n</coverage>\n");
         xml
     }
+
+    /// ソースの行に印を付けた、1 ファイルで完結する HTML（`script` も外部の参照も無い）。印は画面と同じ
+    /// （通った ●、通っていない ○、分かれ道の一部だけ通った ◐）。ソースを読めないファイルは、数えた行だけを出す。
+    pub fn to_html(&self) -> String {
+        let totals = self.totals();
+        let files = self.files();
+        let mut missed: Vec<(usize, u32)> = Vec::new();
+        for (index, (_, lines)) in files.iter().enumerate() {
+            for (line, state) in lines {
+                if line_kind(state) != "hit" {
+                    missed.push((index, *line));
+                }
+            }
+        }
+        let mut html = String::new();
+        html.push_str("<!DOCTYPE html>\n<html lang=\"");
+        html.push_str(crate::i18n::tag());
+        html.push_str("\">\n<head>\n<meta charset=\"utf-8\">\n<title>");
+        html.push_str(&escape(&tr!("Line and branch coverage")));
+        html.push_str("</title>\n<style>\n");
+        html.push_str(HTML_STYLE);
+        html.push_str("</style>\n</head>\n<body>\n<header>\n<h1>");
+        html.push_str(&escape(&tr!("Line and branch coverage")));
+        html.push_str("</h1>\n<div class=\"rates\">\n");
+        let _ = write!(
+            html,
+            "<div class=\"rate\"><b>{pct}%</b>{label}</div>\n<div class=\"rate\"><b>{bpct}%</b>{blabel}</div>\n",
+            pct = percent(totals.line_rate()),
+            label = escape(&tr!("Lines {covered}/{valid}", covered = totals.lines_covered, valid = totals.lines_valid)),
+            bpct = percent(totals.branch_rate()),
+            blabel = escape(&tr!("Branches {covered}/{valid}", covered = totals.branches_covered, valid = totals.branches_valid)),
+        );
+        html.push_str("</div>\n");
+        if !missed.is_empty() {
+            let _ = write!(html, "<h2>{}</h2>\n<ul>\n", escape(&tr!("Lines that did not fully run")));
+            for (index, line) in &missed {
+                let name = escape(files[*index].0.rsplit(['\\', '/']).next().unwrap_or(&files[*index].0));
+                let _ = write!(html, "<li><a href=\"#f{index}-{line}\">{name}:{line}</a></li>\n");
+            }
+            html.push_str("</ul>\n");
+        }
+        html.push_str("<h2>");
+        html.push_str(&escape(&tr!("Sources")));
+        html.push_str("</h2>\n<ul>\n");
+        for (index, (path, lines)) in files.iter().enumerate() {
+            let mut file_totals = Totals::default();
+            file_totals.add_lines(lines.values());
+            let name = escape(path.rsplit(['\\', '/']).next().unwrap_or(path));
+            let _ = write!(
+                html,
+                "<li><a href=\"#file-{index}\">{name}</a> {lines} {branches}</li>\n",
+                lines = escape(&tr!("Lines {covered}/{valid}", covered = file_totals.lines_covered, valid = file_totals.lines_valid)),
+                branches = escape(&tr!("Branches {covered}/{valid}", covered = file_totals.branches_covered, valid = file_totals.branches_valid)),
+            );
+        }
+        html.push_str("</ul>\n</header>\n");
+        for (index, (path, lines)) in files.iter().enumerate() {
+            write_file(&mut html, index, path, lines);
+        }
+        html.push_str("</body>\n</html>\n");
+        html
+    }
 }
 
 /// package（アセンブリ）1 つ。class は（型、ドキュメント）ごと（部分クラスは、ファイルごとに分ける。coverlet と同じ）。
@@ -1003,6 +1065,78 @@ fn write_lines(xml: &mut String, lines: &BTreeMap<(u32, u32), LineState>, indent
         let _ = writeln!(xml, "{indent}  </line>");
     }
     let _ = writeln!(xml, "{indent}</lines>");
+}
+
+const HTML_STYLE: &str = "\
+body { margin: 0; font: 14px/1.5 sans-serif; color: #1c1917; background: #fafaf9; }\n\
+header, section { padding: 16px 32px; }\n\
+h1 { font-size: 22px; margin: 0 0 8px; }\n\
+.rates { display: flex; gap: 16px; }\n\
+.rate { background: #fff; border: 1px solid #e7e5e4; border-radius: 8px; padding: 12px 16px; min-width: 140px; }\n\
+.rate b { display: block; font-size: 28px; }\n\
+h2 { font-size: 16px; }\n\
+h2 span, .missing { font-weight: normal; color: #57534e; }\n\
+table { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #e7e5e4; font-family: Consolas, monospace; font-size: 13px; }\n\
+td { padding: 0 8px; vertical-align: top; white-space: pre; }\n\
+td.n { color: #a8a29e; text-align: right; width: 3em; }\n\
+td.m { width: 1.2em; text-align: center; }\n\
+tr.hit { background: #f0fdf4; } tr.hit td.m { color: #15803d; }\n\
+tr.miss { background: #fef2f2; } tr.miss td.m { color: #b91c1c; }\n\
+tr.part { background: #fffbeb; } tr.part td.m { color: #b45309; }\n\
+code { font-family: inherit; }\n";
+
+/// 行の印。通った行で、数える分かれ道が残っていれば一部。
+fn line_kind(state: &LineState) -> &'static str {
+    if !state.hit {
+        return "miss";
+    }
+    let (covered, valid, _) = state.branches();
+    if valid > covered { "part" } else { "hit" }
+}
+
+fn line_mark(kind: &str, state: Option<&LineState>) -> (&'static str, String) {
+    match kind {
+        "miss" => ("○", tr!("Not run")),
+        "part" => {
+            let (covered, valid, _) = state.map(LineState::branches).unwrap_or((0, 0, 0));
+            ("◐", tr!("Only some branches on this line ran ({covered}/{valid})", covered = covered, valid = valid))
+        }
+        "hit" => ("●", tr!("Ran")),
+        _ => ("", tr!("This line is not counted")),
+    }
+}
+
+fn percent(rate: f64) -> String {
+    let text = format!("{:.1}", rate * 100.0);
+    text.strip_suffix(".0").unwrap_or(&text).to_string()
+}
+
+/// ファイル 1 つのソース。読めなければ、数えた行番号だけ。
+fn write_file(html: &mut String, index: usize, path: &str, lines: &BTreeMap<u32, LineState>) {
+    let name = path.rsplit(['\\', '/']).next().unwrap_or(path);
+    let source = std::fs::read(path).ok().map(|bytes| {
+        String::from_utf8_lossy(&bytes).trim_start_matches('\u{feff}').lines().map(str::to_string).collect::<Vec<_>>()
+    });
+    let last = lines.keys().next_back().copied().unwrap_or(0) as usize;
+    let count = source.as_ref().map(|s| s.len()).unwrap_or(0).max(last);
+    let _ = write!(html, "<section id=\"file-{index}\"><h2>{} <span>{}</span></h2>\n", escape(name), escape(path));
+    if source.is_none() {
+        let _ = write!(html, "<p class=\"missing\">{}</p>\n", escape(&tr!("Could not read {path}.", path = path)));
+    }
+    html.push_str("<table>\n");
+    for number in 1..=count {
+        let state = lines.get(&(number as u32));
+        let kind = state.map(line_kind).unwrap_or("plain");
+        let (mark, title) = line_mark(kind, state);
+        let text = source.as_ref().and_then(|s| s.get(number - 1)).map(String::as_str).unwrap_or("");
+        let _ = write!(
+            html,
+            "<tr class=\"{kind}\" id=\"f{index}-{number}\"><td class=\"n\">{number}</td><td class=\"m\" title=\"{}\">{mark}</td><td class=\"c\"><code>{}</code></td></tr>\n",
+            escape(&title),
+            escape(text)
+        );
+    }
+    html.push_str("</table></section>\n");
 }
 
 fn format_rate(rate: f64) -> String {
@@ -1300,6 +1434,33 @@ mod tests {
         assert!(xml.contains("<condition number=\"9\" type=\"jump\" coverage=\"50%\" />"), "{xml}");
         assert!(xml.contains("<line number=\"13\" hits=\"0\" branch=\"false\" />"), "{xml}");
         assert!(xml.contains("<method name=\"Main\" signature=\"(string[])\""), "{xml}");
+    }
+
+    #[test]
+    fn html_marks_ran_missed_and_partial_lines_and_embeds_the_source() {
+        let dir = std::env::temp_dir().join(format!("netdbg-coverage-html-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Program.cs");
+        let form = dir.join("Main.cs");
+        std::fs::write(&path, "class Program {\r\n    void Main() {\r\n        var n = 1;\r\n        if (n > 0) {\r\n            return;\r\n        }\r\n    }\r\n}\r\n").unwrap();
+        std::fs::write(&form, "class Main {\r\n    void Click() {\r\n    }\r\n}\r\n").unwrap();
+        let outcome = |target, value, seen| Outcome { target, value: Some(value), cases: vec![], at_target: true, how: How::AtTarget, seen };
+        let decision = Decision { offset: 9, document: 1, line: 4, kind: DecisionKind::Jump, outcomes: vec![outcome(5, true, true), outcome(6, false, false)], read: None, stale_reads: 0 };
+        let mut main = MethodCoverage::new(0x0600_0001, "App.Program".into(), "Main".into(), "()".into(), vec![point(0, 2), point(4, 3), point(8, 4), point(12, 5)], vec![decision]);
+        main.hit = vec![true, true, true, false];
+        let mut click = MethodCoverage::new(0x0600_0002, "App.Main".into(), "Click".into(), "()".into(), vec![Point { il_offset: 0, document: 2, start_line: 2, end_line: 2 }], vec![]);
+        click.hit = vec![true];
+        let mut module = module("App", vec![main, click]);
+        module.documents[0] = path.display().to_string();
+        module.documents[1] = form.display().to_string();
+        let html = Coverage { modules: vec![module] }.to_html();
+        assert_eq!(html.matches("<!DOCTYPE html>").count(), 1, "XML の全ファイルは 1 つの HTML");
+        assert!(html.contains("if (n &gt; 0)") && html.contains("void Click()"));
+        assert!(html.contains("id=\"file-0\"") && html.contains("id=\"file-1\""));
+        assert!(html.contains("class=\"part\" id=\"f1-4\""));
+        assert!(html.contains("class=\"miss\" id=\"f1-5\""));
+        assert!(!html.contains("<script"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

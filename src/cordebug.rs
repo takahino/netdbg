@@ -2550,6 +2550,24 @@ impl ComPtr<ICorDebugProcess11> {
     }
 }
 
+// ---- ICorDebugProcess12 : IUnknown
+#[repr(C)]
+pub struct ICorDebugProcess12Vtbl {
+    pub base: IUnknownVtbl,
+    pub GetAsyncStack: unsafe extern "system" fn(this: *mut c_void, continuationAddress: CORDB_ADDRESS, ppStackWalk: *mut *mut c_void) -> HRESULT,
+}
+pub enum ICorDebugProcess12 {}
+unsafe impl Interface for ICorDebugProcess12 {
+    const IID: GUID = GUID { data1: 0x4DCD6FB9, data2: 0x3CF0, data3: 0x43F0, data4: [0x9E, 0xDF, 0xE8, 0x33, 0x07, 0x0F, 0xE6, 0x44] };
+    type Vtbl = ICorDebugProcess12Vtbl;
+}
+impl ComPtr<ICorDebugProcess12> {
+    #[inline]
+    pub unsafe fn GetAsyncStack(&self, continuationAddress: CORDB_ADDRESS, ppStackWalk: *mut *mut c_void) -> HRESULT {
+        (self.vtbl().GetAsyncStack)(self.as_raw(), continuationAddress, ppStackWalk)
+    }
+}
+
 // ---- ICorDebugModuleDebugEvent : ICorDebugDebugEvent
 #[repr(C)]
 pub struct ICorDebugModuleDebugEventVtbl {

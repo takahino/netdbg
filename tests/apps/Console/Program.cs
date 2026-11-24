@@ -80,7 +80,9 @@ class Program
         if (args.Length > 0 && args[0] == "com-leak")
         {
             var kept = new List<object>();
+#pragma warning disable CA1416 // この試験アプリは Windows だけで動かす。
             var type = Type.GetTypeFromProgID("Scripting.FileSystemObject");
+#pragma warning restore CA1416
             kept.Add(Activator.CreateInstance(type)); // @com-before
             for (int i = 0; i < 10; i++)
             {
@@ -147,6 +149,11 @@ class Program
             {
             }
             throw new InvalidOperationException("boom"); // @thrown
+        }
+        // 1 行に文が 2 つあるときの、列のブレークポイント。
+        if (args.Length > 0 && args[0] == "columns")
+        {
+            return TwoStatements();
         }
         // 対象の出力の文字コードの試験用（ASCII でない文字）。
         if (args.Length > 0 && args[0] == "text")
@@ -233,6 +240,13 @@ class Program
     static int Inner(int n)
     { // @inner-open
         return n + 1;
+    }
+
+    // 同じ行の前の文と後ろの文を、列で別々に止める。
+    static int TwoStatements()
+    {
+        int first = 1; int second = first + 1; // @two-statements
+        return second; // @two-after
     }
 
     static int Work(int n)
@@ -534,7 +548,9 @@ static class Conformance
         // decimal と null 許容の値・null の組み合わせ（持ち上げた演算子）、列挙型と数の引き算、null 許容の型の検査。
         Add("price + maybe", price + maybe);
         Add("price * nothing", price * nothing);
+#pragma warning disable CS0472 // decimal と null の比較は、コンパイラが常に false とする。その結果を評価と突き合わせる。
         Add("price == null", price == null);
+#pragma warning restore CS0472
         Add("price > maybe", price > maybe);
         Add("(decimal)shade", (decimal)shade);
         Add("(Shade)price", (Shade)price);
@@ -543,7 +559,9 @@ static class Conformance
         Add("yes + null", yes + null);
         Add("none + none", none + none);
         Add("(object)maybe", (object)maybe);
+#pragma warning disable CS0183 // `a` は int。`is int?` が常に真になることを、評価と突き合わせる。
         Add("a is int?", a is int?);
+#pragma warning restore CS0183
         Add("-2147483648", -2147483648);
         Add("price is > 10", price is > 10);
         // 宣言の型が object の変数に入った文字列は、相手が string か null のときだけ連結になる（boxed + boxedText はエラー）。
@@ -764,7 +782,9 @@ static class Conformance
         Add("(money + money).Amount", (money + money).Amount);
         Add("(money + 1).Amount", (money + 1).Amount);
         Add("(-money).Amount", (-money).Amount);
+#pragma warning disable CS1718 // 同じ変数どうしの比較を、評価と突き合わせる。
         Add("money == money", money == money);
+#pragma warning restore CS1718
         Add("money != new Money(5)", money != new Money(5));
         Add("(int)money", (int)money);
         Add("((Money)3).Amount", ((Money)3).Amount);
@@ -889,7 +909,9 @@ static class Conformance
         Add("string.Format(\"{0}\", point)", string.Format("{0}", point));
         Add("string.Format(\"{0}/{1}\", shade, point.X)", string.Format("{0}/{1}", shade, point.X));
         Add("object.Equals(point, point)", object.Equals(point, point));
+#pragma warning disable CA2013 // 値型を ReferenceEquals に渡すと箱に入る。その結果を評価と突き合わせる。
         Add("object.ReferenceEquals(point, point)", object.ReferenceEquals(point, point));
+#pragma warning restore CA2013
         // await: GetAwaiter().GetResult() で終わるまで待つ（D-034）。async のラムダは、同期で実行して完了済みの Task を返す。
         Add("await LaterAsync(4)", LaterAsync(4).GetAwaiter().GetResult());
         Add("(await SlowAsync()).Length", SlowAsync().GetAwaiter().GetResult().Length);

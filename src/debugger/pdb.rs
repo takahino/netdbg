@@ -157,6 +157,13 @@ pub struct Location {
     pub il_offset: u32,
     /// 実際に止まる行。要求された行にコードが無ければ、その先の最初の行になる。
     pub line: u32,
+    /// 結んだ文の列（1 始まり）。`end_column` は含まない。
+    pub column: u32,
+    pub end_column: u32,
+}
+
+fn located(method: u32, point: &SequencePoint) -> Location {
+    Location { method, il_offset: point.il_offset, line: point.start_line, column: point.start_column, end_column: point.end_column }
 }
 
 /// Document の名前。区切り文字 1 バイトのあとに、各部分の #Blob の添字が並ぶ。
@@ -580,7 +587,7 @@ impl Pdb {
                     Some(b) => p.start_line < b.line || (p.start_line == b.line && row == b.method & 0x00FF_FFFF && p.il_offset < b.il_offset),
                 };
                 if better {
-                    best = Some(Location { method: 0x0600_0000 | row, il_offset: p.il_offset, line: p.start_line });
+                    best = Some(located(0x0600_0000 | row, &p));
                 }
             }
         }
@@ -597,7 +604,32 @@ impl Pdb {
             .filter(|p| p.document == document && !p.is_hidden() && p.start_line >= line)
             // 行が近いもの。同じ行なら IL の若い方（行の先頭の文）。
             .min_by_key(|p| (p.start_line, p.il_offset))
-            .map(|p| Location { method, il_offset: p.il_offset, line: p.start_line })
+            .map(|p| located(method, &p))
+    }
+
+    /// `line` 行の、`column` 列を含む文。隙間の列は、その列以前で始まるいちばん遅い文。その行に文が無ければ
+    /// `resolve_line`（先の最初の行の、最初の文）。列の無い要求は `resolve_line` のまま。
+    pub fn resolve_column(&self, document: u32, line: u32, column: u32) -> Option<Location> {
+        let mut on_line = Vec::new();
+        for row in self.method_rows() {
+            let Some((points, shift)) = self.points(row, LATEST) else { continue };
+            for point in points.iter().map(|p| shifted(p, shift)) {
+                if point.document == document && !point.is_hidden() && point.start_line == line {
+                    on_line.push((0x0600_0000 | row, point));
+                }
+            }
+        }
+        if on_line.is_empty() {
+            return self.resolve_line(document, line);
+        }
+        let contains = |point: &SequencePoint| {
+            let end = point.end_column.max(point.start_column.saturating_add(1));
+            point.start_column <= column && column < end
+        };
+        let chosen = on_line.iter().filter(|(_, point)| contains(point)).max_by_key(|(_, point)| point.start_column).or_else(|| {
+            on_line.iter().filter(|(_, point)| point.start_column <= column).max_by_key(|(_, point)| point.start_column)
+        }).or_else(|| on_line.iter().min_by_key(|(_, point)| (point.start_column, point.il_offset)));
+        chosen.map(|(method, point)| located(*method, point))
     }
 
     /// メソッドの版 `version` の IL オフセットに当たるシーケンスポイント（そのオフセット以前で最後のもの）。
@@ -749,9 +781,13 @@ mod tests {
     #[test]
     fn resolves_a_line_to_its_method_and_il_offset() {
         let pdb = Pdb::parse(&sample()).unwrap();
-        assert_eq!(pdb.resolve_line(1, 10), Some(Location { method: 0x0600_0001, il_offset: 0, line: 10 }));
-        assert_eq!(pdb.resolve_line(1, 12), Some(Location { method: 0x0600_0001, il_offset: 5, line: 12 }));
-        assert_eq!(pdb.resolve_line(1, 20), Some(Location { method: 0x0600_0002, il_offset: 0, line: 20 }));
+        assert_eq!(pdb.resolve_line(1, 10).map(|l| (l.method, l.il_offset, l.line)), Some((0x0600_0001, 0, 10)));
+        assert_eq!(pdb.resolve_line(1, 12).map(|l| (l.method, l.il_offset, l.line)), Some((0x0600_0001, 5, 12)));
+        assert_eq!(pdb.resolve_line(1, 20).map(|l| (l.method, l.il_offset, l.line)), Some((0x0600_0002, 0, 20)));
+        let inside = pdb.resolve_column(1, 12, 7).unwrap();
+        assert_eq!((inside.il_offset, inside.column, inside.end_column), (5, 5, 11));
+        assert_eq!(pdb.resolve_column(1, 12, 1).unwrap().il_offset, 5, "the column is before every statement, so the first one");
+        assert_eq!(pdb.resolve_column(1, 11, 3).unwrap().line, 12, "a line without code moves forward, and the column is not applied there");
     }
 
     #[test]
@@ -822,7 +858,7 @@ mod tests {
     #[test]
     fn a_line_is_resolved_only_inside_the_given_method() {
         let pdb = Pdb::parse(&sample()).unwrap();
-        assert_eq!(pdb.resolve_line_in(1, 12, 0x0600_0001, LATEST), Some(Location { method: 0x0600_0001, il_offset: 5, line: 12 }));
+        assert_eq!(pdb.resolve_line_in(1, 12, 0x0600_0001, LATEST).map(|l| (l.method, l.il_offset, l.line)), Some((0x0600_0001, 5, 12)));
         assert_eq!(pdb.resolve_line_in(1, 11, 0x0600_0001, LATEST).map(|l| l.line), Some(12), "コードの無い行は次の行へ");
         assert_eq!(pdb.resolve_line_in(1, 20, 0x0600_0001, LATEST), None, "20 行目は別のメソッド");
         assert_eq!(pdb.resolve_line_in(1, 20, 0x0600_0002, LATEST).map(|l| l.il_offset), Some(0));

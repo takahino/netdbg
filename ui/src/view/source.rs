@@ -127,7 +127,7 @@ pub fn SourceView() -> impl IntoView {
                         actions::hover_leave(store);
                     }
                 >
-                    <VariableTree tree=store.hover_tree/>
+                    <VariableTree tree=store.hover_tree editable=false/>
                 </div>
             </Show>
         </section>

@@ -112,7 +112,7 @@ Windows PDB(이전 형식)도 읽습니다. 다른 폴더의 PDB를 찾게 하�
 
 ![소스 위의 커버리지](images/en/coverage.png)
 
-"열기"에서 "커버리지 수집"을 켭니다(DAP: `coverage`, MCP: `coverage`). 실행된 줄은 ●, 실행되지 않은 줄은 ○, 분기의 일부 방향만 실행된 줄은 ◐가 됩니다(표시에 마우스를 올리면 어느 방향인지 보입니다). 비율은 위쪽과 소스 목록의 파일마다 표시됩니다. "XML 쓰기"는 Cobertura XML을 씁니다(실행이 끝날 때도 씁니다). ReportGenerator, GitHub, Azure Pipelines, GitLab이 읽을 수 있습니다.
+"열기"에서 "커버리지 수집"을 켭니다(DAP: `coverage`, MCP: `coverage`). 실행된 줄은 ●, 실행되지 않은 줄은 ○, 분기의 일부 방향만 실행된 줄은 ◐가 됩니다(표시에 마우스를 올리면 어느 방향인지 보입니다). 비율은 위쪽과 소스 목록의 파일마다 표시됩니다. "XML 쓰기"는 Cobertura XML을 쓰고, 그 안의 모든 소스를 옆의 HTML 한 파일(`*.coverage.html`)로 모읍니다(실행이 끝날 때도 씁니다). ReportGenerator, GitHub, Azure Pipelines, GitLab이 XML을 읽을 수 있습니다.
 
 ![테스트 보고서의 항목](images/en/report.png)
 
@@ -171,7 +171,16 @@ command = "C:\\tools\\netdbg\\x86\\netdbg.exe"
 args = ["--mcp-connect"]
 ```
 
-AI가 엔진을 직접 실행하게 하려면 `--mcp-connect` 대신 `--mcp`를 쓰십시오.
+AI가 엔진을 직접 실행하게 하려면, 비트수마다 `--mcp`로 등록합니다. 대상과 같은 비트수의 서버를 씁니다. exe 옆에는 같은 비트수의 `dbgshim.dll`과 `encdelta`가 있어야 합니다.
+
+```json
+{
+  "mcpServers": {
+    "netdbg-x86": { "command": "C:\\tools\\netdbg\\x86\\netdbg.exe", "args": ["--mcp"] },
+    "netdbg-x64": { "command": "C:\\tools\\netdbg\\x64\\netdbg.exe", "args": ["--mcp"] }
+  }
+}
+```
 
 ### 도구
 

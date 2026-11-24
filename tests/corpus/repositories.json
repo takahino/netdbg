@@ -1,6 +1,6 @@
 {
     "famous":  {
-                   "note":  "有名なプロジェクト(2026-11-17 に選んだ 8 個)",
+                   "note":  "有名なライブラリ。2026-11-17 に 8 個。2026-11-23 に、SDK 10 でビルドできる有名なライブラリを 8 個足した（global.json が SDK 11 を要するリポジトリは入れていない）",
                    "repositories":  [
                                         {
                                             "repo":  "JamesNK/Newtonsoft.Json",
@@ -32,6 +32,38 @@
                                         },
                                         {
                                             "repo":  "NLog/NLog",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "LuckyPennySoftware/MediatR",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "HangfireIO/Hangfire",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "restsharp/RestSharp",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "litedb-org/LiteDB",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "devlooped/moq",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "ClosedXML/ClosedXML",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "JoshClose/CsvHelper",
+                                            "branch":  "HEAD"
+                                        },
+                                        {
+                                            "repo":  "commandlineparser/commandline",
                                             "branch":  "HEAD"
                                         }
                                     ]
@@ -143,7 +175,7 @@
                                     ]
                },
     "minor":  {
-                  "note":  "新しいが、メンテナーの少ないマイナーなもの。language:C# created:2020-01-01..2024-12-31 stars:1..10 size:100..20000",
+                  "note":  "新しいが、メンテナーの少ないマイナーなもの。language:C# created:2020-01-01..2024-12-31 stars:1..10 size:100..20000。2026-11-23 に同じ条件で 8 個足した",
                   "repositories":  [
                                        {
                                            "repo":  "l1em1on1/social-tennis",
@@ -192,6 +224,38 @@
                                        {
                                            "repo":  "nefarius/AppVeyorArtifactsReceiver",
                                            "branch":  "master"
+                                       },
+                                       {
+                                           "repo":  "jchristn/S3Lite",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "jamesstill/Astronomy",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "simplify9/SW-PrimitiveTypes",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "showmik/TidyText",
+                                           "branch":  "master"
+                                       },
+                                       {
+                                           "repo":  "Sathiyaraman-M/Endurance",
+                                           "branch":  "master"
+                                       },
+                                       {
+                                           "repo":  "alanta/Kontent.Statiq",
+                                           "branch":  "main"
+                                       },
+                                       {
+                                           "repo":  "yagmuraaltug/RentalCarSystem",
+                                           "branch":  "master"
+                                       },
+                                       {
+                                           "repo":  "wolfgitpr/csharp-pinyin",
+                                           "branch":  "main"
                                        }
                                    ]
               }

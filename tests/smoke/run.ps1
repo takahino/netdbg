@@ -120,6 +120,7 @@ foreach ($a in $Arch) {
         Test-ExceptionDetails $a $exe
         Test-Conditions $a $exe
         Test-BreakpointLines $a $exe
+        Test-ColumnBreakpoint $a $exe
         Test-EvalDeadlock $a $exe
         Test-SetVariable $a $exe
         Test-NoImplicitEval $a $exe
@@ -156,6 +157,7 @@ foreach ($a in $Arch) {
         Test-Diff $a $exe
     }
     $script:flavor = $flavors[0]
+    Test-RuntimeAsync $a $exe
     Test-Ui $a $exe
     Test-UiEnglish $a $exe
     Test-UiLanguages $a $exe

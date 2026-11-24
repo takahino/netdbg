@@ -30,6 +30,8 @@ pub(super) struct EncState {
     helper: Option<Helper>,
     /// 補助を起動できなかった理由（当てようとしたときに伝える）。
     start_error: Option<String>,
+    /// モジュール読み込み時に撮った `open`（補助の起動は `applyChanges` まで遅らせ、読み込みのコールバックを塞がない）。
+    pending_opens: Vec<Value>,
     /// 乗り換えの対応: （モジュールのパス、メソッドのトークン、古い版）→ 古い行 → 新しい行。
     remaps: HashMap<(String, u32, u32), Vec<(u32, u32)>>,
     /// 乗り換えないと決めた（スレッド、メソッド、古い版）。行の対応が無い、または `RemapFunction` が断った。系列点のたびに問い直さない。
@@ -40,7 +42,15 @@ pub(super) struct EncState {
 
 impl Default for EncState {
     fn default() -> EncState {
-        EncState { enabled: true, helper: None, start_error: None, remaps: HashMap::new(), declined: HashSet::new(), notified: HashSet::new() }
+        EncState {
+            enabled: true,
+            helper: None,
+            start_error: None,
+            pending_opens: Vec::new(),
+            remaps: HashMap::new(),
+            declined: HashSet::new(),
+            notified: HashSet::new(),
+        }
     }
 }
 
@@ -49,6 +59,7 @@ impl EncState {
     pub(super) fn reset(&mut self) {
         self.helper = None;
         self.start_error = None;
+        self.pending_opens.clear();
         self.remaps.clear();
         self.declined.clear();
         self.notified.clear();
@@ -195,17 +206,10 @@ impl Session {
         self.enc.enabled && !self.is_attached()
     }
 
-    /// EnC の形にしたモジュールを、補助に覚えさせる（いまのソースを、差分の基準にする）。応答は待たない。
+    /// EnC の形にしたモジュールの、いまのソースを差分の基準として覚える。
+    /// 補助プロセスはここでは起動しない（`dotnet` / EncDelta の初回起動が読み込みコールバックを数十秒塞ぐことがあるため）。
+    /// ソースの中身だけここで読み、`applyChanges` の直前に `open` として送る。
     pub(super) fn enc_open(&mut self, index: usize) {
-        if self.enc.helper.is_none() && self.enc.start_error.is_none() {
-            match Helper::start() {
-                Ok(helper) => self.enc.helper = Some(helper),
-                Err(message) => {
-                    crate::log!("encdelta: {message}");
-                    self.enc.start_error = Some(message);
-                }
-            }
-        }
         let module = &self.modules[index];
         let mut request = json!({ "command": "open", "module": module.path });
         if let Some(pdb) = &module.pdb_path {
@@ -219,11 +223,43 @@ impl Session {
             .map(|pdb| pdb.documents.iter().filter_map(|path| Some(json!({ "path": path, "bytes": crate::base64::encode(&std::fs::read(path).ok()?) }))).collect())
             .unwrap_or_default();
         request["sources"] = json!(sources);
-        if let Some(Err(message)) = self.enc.helper.as_mut().map(|helper| helper.send(request)) {
-            crate::log!("encdelta: {message}");
-            self.enc.helper = None;
-            self.enc.start_error = Some(message);
+        self.enc.pending_opens.push(request);
+    }
+
+    /// 補助を起動し、溜めておいた `open` を送る。起動済みなら溜めた分だけ送る。
+    fn ensure_enc_helper(&mut self) -> Result<(), String> {
+        if self.enc.helper.is_some() {
+            return self.flush_pending_opens();
         }
+        if let Some(message) = &self.enc.start_error {
+            return Err(message.clone());
+        }
+        match Helper::start() {
+            Ok(helper) => {
+                self.enc.helper = Some(helper);
+                self.flush_pending_opens()
+            }
+            Err(message) => {
+                crate::log!("encdelta: {message}");
+                self.enc.start_error = Some(message.clone());
+                Err(message)
+            }
+        }
+    }
+
+    fn flush_pending_opens(&mut self) -> Result<(), String> {
+        let opens = std::mem::take(&mut self.enc.pending_opens);
+        for request in opens {
+            if let Some(helper) = self.enc.helper.as_mut() {
+                if let Err(message) = helper.send(request) {
+                    crate::log!("encdelta: {message}");
+                    self.enc.helper = None;
+                    self.enc.start_error = Some(message.clone());
+                    return Err(message);
+                }
+            }
+        }
+        Ok(())
     }
 
     /// `netdbg.applyChanges`: 書き換えたソースの差分を当てる。`files` を渡せば、そのファイルだけを見る。
@@ -258,11 +294,11 @@ impl Session {
         if let Some(process) = &running {
             unsafe { process.Stop(0) }.ok().map_err(|hr| failed(tr_str!("Stopping the target"), hr))?;
         }
-        if self.enc.helper.is_none() {
+        if let Err(message) = self.ensure_enc_helper() {
             if let Some(process) = &running {
                 unsafe { process.Continue(0) };
             }
-            return Err(self.enc.start_error.clone().unwrap_or_else(|| tr!("The delta helper is not running. Restart debugging.")));
+            return Err(message);
         }
         let capabilities = self.enc_capabilities();
         for index in targets {

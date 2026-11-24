@@ -143,6 +143,10 @@ pub enum Expr {
     Conditional(Box<Expr>, Box<Expr>, Box<Expr>),
     /// `a ?? b`。
     Coalesce(Box<Expr>, Box<Expr>),
+    /// `a && b`（短絡。左が偽なら右は評価しない）。
+    AndAlso(Box<Expr>, Box<Expr>),
+    /// `a || b`（短絡。左が真なら右は評価しない）。
+    OrElse(Box<Expr>, Box<Expr>),
     /// 初期化子つきの `new`（`new List<int> { 1, 2 }`、`new Thread(…) { Name = "x" }`）。`items` は、コレクションなら
     /// `Add` の引数の並び、オブジェクトなら「メンバーの名前、値」。
     Initializer { new: Box<Expr>, collection: Vec<Vec<Expr>>, members: Vec<(String, Expr)> },
@@ -227,10 +231,18 @@ pub enum StmtKind {
     SwitchBlock { value: Expr, sections: Vec<Section>, ty: Option<Ty> },
 }
 
+/// `switch` の case の値。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Case {
+    Int(i64),
+    Char(u16),
+    Str(String),
+}
+
 /// `switch` の節 1 つ: case の値（空なら `default`）と中身。
 #[derive(Debug, Clone, PartialEq)]
 pub struct Section {
-    pub cases: Vec<i64>,
+    pub cases: Vec<Case>,
     pub default: bool,
     pub body: Vec<Stmt>,
 }
@@ -263,7 +275,12 @@ impl Stmt {
 
     /// この文のあとに、次の文へ進まない（戻る、投げる、飛ぶ）。
     pub fn ends_flow(&self) -> bool {
-        matches!(self.kind, StmtKind::Return(_) | StmtKind::Throw(_) | StmtKind::Goto(_) | StmtKind::Break | StmtKind::Continue)
+        match &self.kind {
+            StmtKind::Return(_) | StmtKind::Throw(_) | StmtKind::Goto(_) | StmtKind::Break | StmtKind::Continue => true,
+            // どの節も return / throw / goto で終わる switch は、その先へ落ちない。break は switch のうしろへ戻るので、ここでは終わったことにしない。
+            StmtKind::SwitchBlock { sections, .. } => sections.iter().all(|section| section.body.last().is_some_and(|stmt| matches!(stmt.kind, StmtKind::Return(_) | StmtKind::Throw(_) | StmtKind::Goto(_)))),
+            _ => false,
+        }
     }
 }
 
@@ -271,7 +288,7 @@ impl Expr {
     /// 式の子を、読む順に `f` に渡す。木をたどるたびに一覧を作らないため（`children` は一覧を作る）。
     pub fn for_each_child<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
         match self {
-            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) | Expr::Element { array: a, index: b } => {
+            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) | Expr::AndAlso(a, b) | Expr::OrElse(a, b) | Expr::Element { array: a, index: b } => {
                 f(a);
                 f(b);
             }
@@ -311,7 +328,7 @@ impl Expr {
     /// `for_each_child` の書き換えられる版。
     pub fn for_each_child_mut(&mut self, f: &mut impl FnMut(&mut Expr)) {
         match self {
-            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) | Expr::Element { array: a, index: b } => {
+            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) | Expr::AndAlso(a, b) | Expr::OrElse(a, b) | Expr::Element { array: a, index: b } => {
                 f(a);
                 f(b);
             }
@@ -351,7 +368,7 @@ impl Expr {
     /// 式の子（読む順）。
     pub fn children(&self) -> Vec<&Expr> {
         match self {
-            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) => vec![a, b],
+            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) | Expr::AndAlso(a, b) | Expr::OrElse(a, b) => vec![a, b],
             Expr::Conditional(c, a, b) => vec![c, a, b],
             Expr::Element { array, index } => vec![array, index],
             Expr::Neg(e) | Expr::BitNot(e) | Expr::Not(e) | Expr::AddressOf(e) | Expr::Deref(e) | Expr::Length(e) | Expr::NullConditional(e) => vec![e],
@@ -368,7 +385,7 @@ impl Expr {
 
     pub fn children_mut(&mut self) -> Vec<&mut Expr> {
         match self {
-            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) => vec![a, b],
+            Expr::Binary(_, a, b) | Expr::Checked(_, a, b) | Expr::Compare(_, a, b) | Expr::Assign(a, b) | Expr::Coalesce(a, b) | Expr::AndAlso(a, b) | Expr::OrElse(a, b) => vec![a, b],
             Expr::Conditional(c, a, b) => vec![c, a, b],
             Expr::Element { array, index } => vec![array, index],
             Expr::Neg(e) | Expr::BitNot(e) | Expr::Not(e) | Expr::AddressOf(e) | Expr::Deref(e) | Expr::Length(e) | Expr::NullConditional(e) => vec![e],

@@ -86,6 +86,8 @@ input { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-r
 .tree li.scope { font-family: inherit; font-weight: 600; font-size: 13px; }
 .tree .arrow { display: inline-block; width: 14px; color: var(--muted); font-size: 10px; }
 .tree .value, .watch .value { color: var(--st); }
+.tree .value.editable, .watch .value.editable { cursor: text; border-bottom: 1px dashed var(--line); }
+input.value-edit { width: 14em; padding: 0 4px; font-family: inherit; font-size: inherit; }
 .watch li { display: flex; font-family: "Cascadia Mono", Consolas, var(--cjk-mono), monospace; font-size: 12px; }
 .watch .value { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .value.failed { color: var(--muted); font-style: italic; }

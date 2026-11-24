@@ -55,18 +55,33 @@ function Publish-SingleFile([string]$Project, [string]$Name, [string]$A) {
     }
 }
 
-# 総当たり試験 (Sweep) の式は、tools/exprgen が作る。対象アプリをビルドする前に、target\sweep に用意しておく。
-function Build-SweepExpressions {
-    Write-Host '==> exprgen (総当たり試験の式)' -ForegroundColor Cyan
+# 総当たり試験 (Sweep) と呼び出しオーバーロード試験 (Calls) の式は、tools/exprgen が作る。
+# 対象アプリをビルドする前に、target\sweep と target\calls に用意しておく。
+function Build-Exprgen {
     $obj = (Join-Path $root 'target\exprgen\obj') -replace '\\', '/'
     $ErrorActionPreference = 'Continue'
     & dotnet build (Join-Path $root 'tools\exprgen') -c Release -o (Join-Path $root 'target\exprgen\bin') "-p:BaseIntermediateOutputPath=$obj/" -nologo -v q
     if ($LASTEXITCODE -ne 0) { throw "tools\exprgen のビルドに失敗しました (exit code $LASTEXITCODE)。" }
+    $ErrorActionPreference = 'Stop'
+}
+function Build-SweepExpressions {
+    Write-Host '==> exprgen (総当たり試験の式)' -ForegroundColor Cyan
+    Build-Exprgen
+    $ErrorActionPreference = 'Continue'
     & (Join-Path $root 'target\exprgen\bin\exprgen.exe') sweep (Join-Path $PSScriptRoot 'Sweep\Program.cs') (Join-Path $root 'target\sweep')
-    if ($LASTEXITCODE -ne 0) { throw "exprgen が失敗しました (exit code $LASTEXITCODE)。" }
+    if ($LASTEXITCODE -ne 0) { throw "exprgen sweep が失敗しました (exit code $LASTEXITCODE)。" }
+    $ErrorActionPreference = 'Stop'
+}
+function Build-CallsExpressions {
+    Write-Host '==> exprgen (呼び出しオーバーロードの式)' -ForegroundColor Cyan
+    Build-Exprgen
+    $ErrorActionPreference = 'Continue'
+    & (Join-Path $root 'target\exprgen\bin\exprgen.exe') calls (Join-Path $PSScriptRoot 'Calls\Program.cs') (Join-Path $root 'target\calls')
+    if ($LASTEXITCODE -ne 0) { throw "exprgen calls が失敗しました (exit code $LASTEXITCODE)。" }
     $ErrorActionPreference = 'Stop'
 }
 Build-SweepExpressions
+Build-CallsExpressions
 
 foreach ($project in Get-ChildItem $PSScriptRoot -Directory) {
     # 以前の作り方で出来たプロジェクト直下の obj / bin が残っていると、その中の .cs まで拾われる。
@@ -75,8 +90,8 @@ foreach ($project in Get-ChildItem $PSScriptRoot -Directory) {
         if (Test-Path $path) { Remove-Item $path -Recurse -Force }
     }
     foreach ($a in $Arch) {
-        # Console11 は、機械に .NET 11 が無くても動くように、いつもランタイムを同梱する。
-        Build-App $project.FullName $project.Name $a ($project.Name -eq 'Console11')
+        # Console11 と RuntimeAsync は、機械に .NET 11 が無くても動くように、いつもランタイムを同梱する。
+        Build-App $project.FullName $project.Name $a ($project.Name -eq 'Console11' -or $project.Name -eq 'RuntimeAsync')
         if ($selfContained -contains $project.Name) {
             Build-App $project.FullName "$($project.Name)SelfContained" $a $true
             Publish-SingleFile $project.FullName "$($project.Name)Single" $a
